@@ -1,0 +1,507 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../server/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Role {
+  OWNER
+  ADMIN
+  USER
+}
+
+enum Language {
+  EN
+  PT
+  ES
+}
+
+enum Theme {
+  LIGHT
+  DARK
+}
+
+enum ProjectType {
+  STUDY
+  REVERSE_ENGINEERING
+  CONTENT_BUILDER
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum VideoSourceType {
+  YOUTUBE_VIDEO
+  YOUTUBE_PLAYLIST
+  MP4
+  MP3
+}
+
+enum VideoStatus {
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum JobStage {
+  QUEUED
+  DOWNLOADED
+  EXTRACTED
+  TRANSCRIBED
+  TRANSLATED
+  NARRATED
+  SLIDES_GENERATED
+  VIDEO_RENDERED
+  QUIZ_GENERATED
+  FLASHCARDS_GENERATED
+  EXPORTED
+  COMPLETED
+  FAILED
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+enum ApiProvider {
+  OPENAI
+  ELEVENLABS
+}
+
+enum StorageBucket {
+  VIDEOS
+  AUDIO
+  SLIDES
+  EXPORTS
+  IMAGES
+  DOCUMENTS
+  GENERATED
+  THUMBNAILS
+}
+
+enum ContentBuilderChannel {
+  YOUTUBE
+  SHORTS
+  TIKTOK
+  INSTAGRAM
+  BLOG
+  NEWSLETTER
+  PODCAST
+  SLIDES
+  COURSE
+}
+
+// ---------------------------------------------------------------------------
+// Core / Auth
+// ---------------------------------------------------------------------------
+
+/// Mirrors a row in Supabase `auth.users`; id is the same UUID as auth.users.id.
+model Profile {
+  id              String   @id @db.Uuid
+  email           String   @unique
+  displayName     String?
+  role            Role     @default(USER)
+  defaultLanguage Language @default(EN)
+  translationLang Language @default(PT)
+  defaultVoiceId  String?
+  theme           Theme    @default(LIGHT)
+
+  openaiApiKeyEnc     Bytes?
+  elevenlabsApiKeyEnc Bytes?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  projects       Project[]
+  processingJobs ProcessingJob[] @relation("JobRetriedBy")
+  apiUsageLogs   ApiUsageLog[]
+  auditLogs      AuditLog[]
+
+  @@index([role])
+  @@map("profiles")
+}
+
+// ---------------------------------------------------------------------------
+// Projects / Videos
+// ---------------------------------------------------------------------------
+
+model Project {
+  id     String        @id @default(uuid()) @db.Uuid
+  owner  Profile       @relation(fields: [ownerId], references: [id])
+  ownerId String       @db.Uuid
+  title  String
+  type   ProjectType
+  status ProjectStatus @default(ACTIVE)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  videos               Video[]
+  channelAnalyses      ChannelAnalysis[]
+  contentBuilderOutputs ContentBuilderOutput[]
+  knowledgeBaseEntries KnowledgeBaseEntry[]
+  apiUsageLogs         ApiUsageLog[]
+  storageAssets        StorageAsset[]
+
+  @@index([ownerId])
+  @@index([status])
+  @@map("projects")
+}
+
+model Video {
+  id          String          @id @default(uuid()) @db.Uuid
+  project     Project         @relation(fields: [projectId], references: [id])
+  projectId   String          @db.Uuid
+  sourceUrl   String
+  sourceType  VideoSourceType
+  title       String?
+  durationSec Int?
+  status      VideoStatus     @default(QUEUED)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  processingJobs  ProcessingJob[]
+  transcript      Transcript?
+  translation     Translation?
+  narrationAsset  NarrationAsset?
+  slideDeck       SlideDeck?
+  studyVideoAsset StudyVideoAsset?
+  glossary        Glossary?
+  quiz            Quiz?
+  flashcards      Flashcard[]
+  channelAnalysis ChannelAnalysis?
+  storageAssets   StorageAsset[]
+  apiUsageLogs    ApiUsageLog[]
+
+  @@index([projectId])
+  @@index([status])
+  @@map("videos")
+}
+
+// ---------------------------------------------------------------------------
+// Processing queue
+// ---------------------------------------------------------------------------
+
+model ProcessingJob {
+  id        String    @id @default(uuid()) @db.Uuid
+  video     Video     @relation(fields: [videoId], references: [id])
+  videoId   String    @db.Uuid
+  stage     JobStage  @default(QUEUED)
+  status    JobStatus @default(PENDING)
+  attempts  Int       @default(0)
+  maxAttempts Int     @default(3)
+  lastError String?
+  retriedBy   Profile? @relation("JobRetriedBy", fields: [retriedById], references: [id])
+  retriedById String?  @db.Uuid
+
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([videoId])
+  @@index([stage, status])
+  @@map("processing_jobs")
+}
+
+// ---------------------------------------------------------------------------
+// Study Engine artifacts
+// ---------------------------------------------------------------------------
+
+model Transcript {
+  id        String   @id @default(uuid()) @db.Uuid
+  video     Video    @relation(fields: [videoId], references: [id])
+  videoId   String   @db.Uuid @unique
+  language  Language @default(EN)
+  content   String
+  storagePath String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("transcripts")
+}
+
+model Translation {
+  id          String   @id @default(uuid()) @db.Uuid
+  video       Video    @relation(fields: [videoId], references: [id])
+  videoId     String   @db.Uuid @unique
+  language    Language @default(PT)
+  content     String
+  storagePath String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("translations")
+}
+
+model NarrationAsset {
+  id          String  @id @default(uuid()) @db.Uuid
+  video       Video   @relation(fields: [videoId], references: [id])
+  videoId     String  @db.Uuid @unique
+  voiceId     String
+  language    Language @default(PT)
+  script      String
+  storagePath String
+  durationSec Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("narration_assets")
+}
+
+model SlideDeck {
+  id           String @id @default(uuid()) @db.Uuid
+  video        Video  @relation(fields: [videoId], references: [id])
+  videoId      String @db.Uuid @unique
+  slideCount   Int
+  pptxPath     String
+  pdfPath      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("slide_decks")
+}
+
+model StudyVideoAsset {
+  id          String @id @default(uuid()) @db.Uuid
+  video       Video  @relation(fields: [videoId], references: [id])
+  videoId     String @db.Uuid @unique
+  storagePath String
+  durationSec Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("study_video_assets")
+}
+
+model Glossary {
+  id      String @id @default(uuid()) @db.Uuid
+  video   Video  @relation(fields: [videoId], references: [id])
+  videoId String @db.Uuid @unique
+  terms   Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("glossaries")
+}
+
+model Quiz {
+  id      String @id @default(uuid()) @db.Uuid
+  video   Video  @relation(fields: [videoId], references: [id])
+  videoId String @db.Uuid @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  questions QuizQuestion[]
+
+  @@map("quizzes")
+}
+
+model QuizQuestion {
+  id            String   @id @default(uuid()) @db.Uuid
+  quiz          Quiz     @relation(fields: [quizId], references: [id])
+  quizId        String   @db.Uuid
+  question      String
+  options       Json
+  correctOption Int
+  explanation   String?
+  order         Int      @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([quizId])
+  @@map("quiz_questions")
+}
+
+model Flashcard {
+  id      String  @id @default(uuid()) @db.Uuid
+  video   Video   @relation(fields: [videoId], references: [id])
+  videoId String  @db.Uuid
+  front   String
+  back    String
+  order   Int     @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([videoId])
+  @@map("flashcards")
+}
+
+// ---------------------------------------------------------------------------
+// Reverse Engineering Engine (schema only for now)
+// ---------------------------------------------------------------------------
+
+model ChannelAnalysis {
+  id      String @id @default(uuid()) @db.Uuid
+  project Project @relation(fields: [projectId], references: [id])
+  projectId String @db.Uuid
+  video   Video?  @relation(fields: [videoId], references: [id])
+  videoId String? @db.Uuid @unique
+
+  sourceUrl String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  viralDnaProfile ViralDnaProfile?
+
+  @@index([projectId])
+  @@map("channel_analyses")
+}
+
+model ViralDnaProfile {
+  id                String          @id @default(uuid()) @db.Uuid
+  channelAnalysis   ChannelAnalysis @relation(fields: [channelAnalysisId], references: [id])
+  channelAnalysisId String          @db.Uuid @unique
+
+  hookDurationSec     Float?
+  avgSceneDurationSec Float?
+  voiceSpeedWpm       Float?
+  imageCount          Int?
+  emotionalCurve      Json?
+  ctaStyle            String?
+  visualRhythm        Json?
+  narrativePattern    String?
+  retentionPattern    Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("viral_dna_profiles")
+}
+
+// ---------------------------------------------------------------------------
+// Content Builder (schema only for now)
+// ---------------------------------------------------------------------------
+
+model ContentBuilderOutput {
+  id        String                @id @default(uuid()) @db.Uuid
+  project   Project               @relation(fields: [projectId], references: [id])
+  projectId String                @db.Uuid
+  channel   ContentBuilderChannel
+  title     String
+  content   Json
+  status    ProjectStatus         @default(ACTIVE)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([projectId])
+  @@map("content_builder_outputs")
+}
+
+// ---------------------------------------------------------------------------
+// Knowledge Base
+// ---------------------------------------------------------------------------
+
+model KnowledgeBaseEntry {
+  id        String   @id @default(uuid()) @db.Uuid
+  project   Project  @relation(fields: [projectId], references: [id])
+  projectId String   @db.Uuid
+  title     String
+  entryType String
+  summary   String?
+  refTable  String
+  refId     String   @db.Uuid
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([refTable, refId])
+  @@map("knowledge_base_entries")
+}
+
+// ---------------------------------------------------------------------------
+// Observability / Cost
+// ---------------------------------------------------------------------------
+
+model ApiUsageLog {
+  id        String      @id @default(uuid()) @db.Uuid
+  profile   Profile     @relation(fields: [profileId], references: [id])
+  profileId String      @db.Uuid
+  project   Project?    @relation(fields: [projectId], references: [id])
+  projectId String?     @db.Uuid
+  video     Video?      @relation(fields: [videoId], references: [id])
+  videoId   String?     @db.Uuid
+
+  provider        ApiProvider
+  unit            String
+  quantity        Float
+  estimatedCostUsd Float
+
+  createdAt DateTime @default(now())
+
+  @@index([profileId])
+  @@index([projectId])
+  @@index([videoId])
+  @@map("api_usage_logs")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  actor     Profile? @relation(fields: [actorId], references: [id])
+  actorId   String?  @db.Uuid
+  action    String
+  entity    String
+  entityId  String?  @db.Uuid
+  before    Json?
+  after     Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([actorId])
+  @@index([entity, entityId])
+  @@map("audit_logs")
+}
+
+model StorageAsset {
+  id        String        @id @default(uuid()) @db.Uuid
+  project   Project?      @relation(fields: [projectId], references: [id])
+  projectId String?       @db.Uuid
+  video     Video?        @relation(fields: [videoId], references: [id])
+  videoId   String?       @db.Uuid
+
+  bucket    StorageBucket
+  path      String
+  mimeType  String?
+  sizeBytes Int?
+
+  createdAt DateTime @default(now())
+
+  @@index([projectId])
+  @@index([videoId])
+  @@index([bucket])
+  @@map("storage_assets")
+}

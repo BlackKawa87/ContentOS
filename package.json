@@ -7,14 +7,17 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "setup:storage": "tsx server/scripts/setupStorage.ts"
   },
   "dependencies": {
     "@prisma/client": "^7.8.0",
     "@supabase/supabase-js": "^2.110.2",
     "@tailwindcss/vite": "^4.3.2",
+    "elevenlabs": "^1.59.0",
     "i18next": "^26.3.6",
     "lucide-react": "^1.24.0",
+    "openai": "^6.46.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-i18next": "^17.0.9",
@@ -30,6 +33,7 @@
     "dotenv": "^17.4.2",
     "oxlint": "^1.71.0",
     "prisma": "^7.8.0",
+    "tsx": "^4.23.0",
     "typescript": "~6.0.2",
     "vercel": "^55.0.0",
     "vite": "^8.1.1"

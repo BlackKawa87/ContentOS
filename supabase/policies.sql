@@ -16,11 +16,12 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.profiles (id, email, role)
+  insert into public.profiles (id, email, role, "updatedAt")
   values (
     new.id,
     new.email,
-    case when (select count(*) from public.profiles) = 0 then 'OWNER' else 'USER' end
+    (case when (select count(*) from public.profiles) = 0 then 'OWNER' else 'USER' end)::"Role",
+    now()
   )
   on conflict (id) do nothing;
   return new;

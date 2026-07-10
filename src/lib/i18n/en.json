@@ -1,0 +1,40 @@
+{
+  "app": { "name": "ContentOS" },
+  "nav": {
+    "dashboard": "Dashboard",
+    "studyEngine": "Study Engine",
+    "reverseEngineering": "Reverse Engineering",
+    "contentBuilder": "Content Builder",
+    "knowledgeBase": "Knowledge Base",
+    "settings": "Settings"
+  },
+  "auth": {
+    "signIn": "Sign in",
+    "signUp": "Create account",
+    "email": "Email",
+    "password": "Password",
+    "signOut": "Sign out",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "projects": "Projects",
+    "videos": "Videos",
+    "processingQueue": "Processing Queue",
+    "recentActivity": "Recent Activity",
+    "storageUsage": "Storage Usage",
+    "estimatedCost": "Estimated Cost"
+  },
+  "settings": {
+    "title": "Settings",
+    "apiKeys": "API Keys",
+    "openaiKey": "OpenAI API Key",
+    "elevenlabsKey": "ElevenLabs API Key",
+    "defaultVoice": "Default Voice",
+    "defaultLanguage": "Default Language",
+    "translationLanguage": "Translation Language",
+    "theme": "Theme",
+    "save": "Save"
+  }
+}

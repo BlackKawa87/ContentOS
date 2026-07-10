@@ -36,3 +36,6 @@ dist-ssr
 
 # Vercel
 .vercel
+
+# Claude Code local session state
+.claude/

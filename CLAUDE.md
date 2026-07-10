@@ -23,6 +23,12 @@ npx prisma generate  # Regenerate the Prisma client (server/generated/prisma)
 
 No test framework is configured yet.
 
+**Supabase Postgres connection**: use the Supavisor **session pooler** string (Project Settings >
+Database > Connection String > "Session pooler", host `aws-0-<region>.pooler.supabase.com:5432`).
+The direct connection (`db.<ref>.supabase.co:5432`) is IPv6-only and unreachable from most
+sandboxed/local networks; the transaction pooler (`:6543`) hangs indefinitely on `prisma migrate`'s
+advisory locks. Only the session pooler works reliably for migrations here.
+
 ## Stack (do not change)
 
 - Frontend: React + TypeScript + Vite + Tailwind CSS v4 (`@tailwindcss/vite`, no `tailwind.config.js`)

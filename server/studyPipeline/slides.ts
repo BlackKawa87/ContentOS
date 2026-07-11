@@ -1,19 +1,21 @@
-// Import the CJS build directly rather than the bare 'pptxgenjs' specifier.
-// The package's "exports" map picks pptxgen.es.js under "type": "module", but
-// Vercel's Node builder loads that file through a CJS require() somewhere in
-// its bundling, which throws "Cannot use import statement outside a module"
-// in production (didn't reproduce locally). Forcing the CJS file sidesteps
-// the broken exports-conditional resolution entirely.
-// @ts-expect-error -- no type declarations for this deep CJS path; typed via 'pptxgenjs' below
-import * as PptxGenJSModule from 'pptxgenjs/dist/pptxgen.cjs.js'
+import { createRequire } from 'node:module'
 import type { VideoModel as Video } from '../generated/prisma/models.js'
 import { prisma } from '../lib/prisma.js'
 import { uploadAsset } from '../lib/storage.js'
-import { unwrapDefault } from '../lib/interop.js'
 import { getVideoContext } from './common.js'
 import { buildSlidePlan } from './slidePlan.js'
 
-const PptxGenJS = unwrapDefault<typeof import('pptxgenjs').default>(PptxGenJSModule)
+// pptxgenjs's package.json "exports" map sends the "import" condition to a
+// real-ESM file (pptxgen.es.js) that Vercel's Node function bundler loads
+// through a require() somewhere in its own bundling, throwing "Cannot use
+// import statement outside a module" in production (never reproduced
+// locally). A deep import of the CJS build is *also* rejected — Node's ESM
+// resolver enforces the exports map strictly, so subpaths not listed there
+// are ERR_PACKAGE_PATH_NOT_EXPORTED. createRequire sidesteps both: it forces
+// genuine CJS resolution (the package's "require" condition -> pptxgen.cjs.js)
+// through Node's own module system rather than static import analysis.
+const require = createRequire(import.meta.url)
+const PptxGenJS = require('pptxgenjs') as typeof import('pptxgenjs').default
 
 export async function slidesStage(video: Video): Promise<void> {
   const { projectId, profile } = await getVideoContext(video)

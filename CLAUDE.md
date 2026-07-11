@@ -29,6 +29,12 @@ The direct connection (`db.<ref>.supabase.co:5432`) is IPv6-only and unreachable
 sandboxed/local networks; the transaction pooler (`:6543`) hangs indefinitely on `prisma migrate`'s
 advisory locks. Only the session pooler works reliably for migrations here.
 
+**Video rendering (deviation from spec, confirmed with user)**: `VIDEO_RENDERED` uses plain
+`ffmpeg-static`/`fluent-ffmpeg` (slide PNGs rasterized from SVG via `sharp`, concatenated with the
+narration track) instead of Remotion. This sandbox has no system Chrome and Remotion's headless
+Chromium download was judged too slow/fragile to justify given the session's cost. Revisit Remotion
+later if richer slide animation is wanted — see `server/lib/ffmpeg.ts` / `server/studyPipeline/renderVideo.ts`.
+
 ## Stack (do not change)
 
 - Frontend: React + TypeScript + Vite + Tailwind CSS v4 (`@tailwindcss/vite`, no `tailwind.config.js`)

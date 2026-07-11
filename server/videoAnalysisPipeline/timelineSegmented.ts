@@ -68,10 +68,19 @@ export async function timelineSegmentedStage(video: Video): Promise<void> {
   const raw = completion.choices[0].message.content ?? '{}'
   const parsed = JSON.parse(raw) as { segments: TimelineSegmentDraft[] }
 
+  // Guard against two failure modes seen in real runs: (1) the model returning a type value
+  // outside the enum (e.g. "CALL_TO_ACTION" instead of "CTA") — Prisma rejects this outright;
+  // (2) the model producing out-of-order/negative-duration timestamps, which Prisma does NOT
+  // reject (no DB constraint), so it would silently corrupt the timeline otherwise. Sort by
+  // start time and drop anything with a non-positive duration or an invalid type.
+  const segments = (parsed.segments ?? [])
+    .filter((s) => SEGMENT_TYPES.includes(s.type) && s.endSec > s.startSec)
+    .sort((a, b) => a.startSec - b.startSec)
+
   await prisma.timelineSegment.deleteMany({ where: { videoId: video.id } })
-  if (parsed.segments?.length > 0) {
+  if (segments.length > 0) {
     await prisma.timelineSegment.createMany({
-      data: parsed.segments.map((s, index) => ({
+      data: segments.map((s, index) => ({
         videoId: video.id,
         index,
         type: s.type,

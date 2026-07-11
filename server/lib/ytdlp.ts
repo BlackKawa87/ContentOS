@@ -1,19 +1,68 @@
-import YtDlpWrap from 'yt-dlp-wrap'
-import { readFile, unlink } from 'node:fs/promises'
+import * as YtDlpWrapModule from 'yt-dlp-wrap'
+import { readFile, writeFile, unlink, chmod, stat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
+
+// yt-dlp-wrap is CJS with `exports.default = YTDlpWrap`. Node's CJS/ESM interop
+// double-wraps this (`mod.default.default` is the actual class), so unwrap
+// however many `.default` levels are actually present rather than assuming one.
+function unwrapDefault(mod: unknown): unknown {
+  let current = mod
+  while (
+    typeof current === 'object' &&
+    current !== null &&
+    'default' in current &&
+    typeof (current as { default: unknown }).default !== 'undefined'
+  ) {
+    current = (current as { default: unknown }).default
+  }
+  return current
+}
+const YtDlpWrap = unwrapDefault(YtDlpWrapModule) as typeof import('yt-dlp-wrap').default
+
+/**
+ * yt-dlp-wrap's own downloadFromGithub always fetches the generic `yt-dlp`
+ * asset (a Python zipapp requiring Python 3.10+), which isn't reliably
+ * available on either a dev machine or Vercel's Linux runtime. We instead
+ * fetch the platform-specific standalone binary (no Python dependency).
+ */
+function standaloneAssetName(): string {
+  if (process.platform === 'darwin') return 'yt-dlp_macos'
+  if (process.platform === 'win32') return 'yt-dlp.exe'
+  return 'yt-dlp_linux'
+}
+
+async function downloadStandaloneBinary(filePath: string): Promise<void> {
+  const url = `https://github.com/yt-dlp/yt-dlp/releases/latest/download/${standaloneAssetName()}`
+  const response = await fetch(url, { redirect: 'follow' })
+  if (!response.ok || !response.body) throw new Error(`Failed to download yt-dlp: ${response.status}`)
+
+  const buffer = Buffer.from(await response.arrayBuffer())
+  const expectedSize = Number(response.headers.get('content-length') ?? 0)
+  if (expectedSize > 0 && buffer.byteLength !== expectedSize) {
+    throw new Error(`yt-dlp download truncated: got ${buffer.byteLength} bytes, expected ${expectedSize}`)
+  }
+
+  await writeFile(filePath, buffer)
+  await chmod(filePath, 0o755)
+}
 
 let ytDlpWrap: InstanceType<typeof YtDlpWrap> | null = null
 
 async function getYtDlp() {
   if (ytDlpWrap) return ytDlpWrap
-  const binaryPath = path.join(tmpdir(), 'yt-dlp')
+  const binaryPath = path.join(tmpdir(), 'yt-dlp-standalone')
+
+  let needsDownload = true
   try {
-    await readFile(binaryPath)
+    const s = await stat(binaryPath)
+    needsDownload = s.size === 0
   } catch {
-    await YtDlpWrap.downloadFromGithub(binaryPath)
+    needsDownload = true
   }
+  if (needsDownload) await downloadStandaloneBinary(binaryPath)
+
   ytDlpWrap = new YtDlpWrap(binaryPath)
   return ytDlpWrap
 }

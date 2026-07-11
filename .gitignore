@@ -39,3 +39,4 @@ dist-ssr
 
 # Claude Code local session state
 .claude/
+.env*

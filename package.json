@@ -5,12 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && tsc --noEmit -p tsconfig.server.json && vite build",
+    "typecheck:server": "tsc --noEmit -p tsconfig.server.json",
     "lint": "oxlint",
     "preview": "vite preview",
     "setup:storage": "tsx server/scripts/setupStorage.ts"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "@supabase/supabase-js": "^2.110.2",
     "@tailwindcss/vite": "^4.3.2",
@@ -18,6 +20,7 @@
     "i18next": "^26.3.6",
     "lucide-react": "^1.24.0",
     "openai": "^6.46.0",
+    "pg": "^8.22.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-i18next": "^17.0.9",
@@ -29,6 +32,7 @@
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
+    "@vercel/node": "^5.8.23",
     "@vitejs/plugin-react": "^6.0.3",
     "dotenv": "^17.4.2",
     "oxlint": "^1.71.0",

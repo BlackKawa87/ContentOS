@@ -1,21 +1,22 @@
 import type { VercelRequest } from '@vercel/node'
-import { supabaseAdmin } from './supabaseAdmin.js'
+import { prisma } from './prisma.js'
 
 export interface AuthedUser {
   id: string
   email: string
 }
 
-/** Verifies the Supabase access token from the Authorization header. Throws on failure. */
-export async function requireUser(req: VercelRequest): Promise<AuthedUser> {
-  const header = req.headers.authorization
-  const token = header?.startsWith('Bearer ') ? header.slice('Bearer '.length) : null
-  if (!token) throw new HttpError(401, 'Missing bearer token')
+let cachedUser: AuthedUser | null = null
 
-  const { data, error } = await supabaseAdmin.auth.getUser(token)
-  if (error || !data.user) throw new HttpError(401, 'Invalid or expired token')
-
-  return { id: data.user.id, email: data.user.email ?? '' }
+/** Single-user personal deployment — no login. Every request acts as the one existing
+ * profile rather than verifying a Supabase session/Bearer token. Kept as an async function
+ * with this signature (unchanged from the old JWT-checking version) so none of the API
+ * route call sites needed to change. */
+export async function requireUser(_req: VercelRequest): Promise<AuthedUser> {
+  if (cachedUser) return cachedUser
+  const profile = await prisma.profile.findFirstOrThrow({ orderBy: { createdAt: 'asc' } })
+  cachedUser = { id: profile.id, email: profile.email }
+  return cachedUser
 }
 
 export class HttpError extends Error {

@@ -2,8 +2,6 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import AppShell from './components/layout/AppShell'
-import ProtectedRoute from './routes/ProtectedRoute'
-import Login from './routes/Login'
 import Dashboard from './routes/Dashboard'
 import Settings from './routes/Settings'
 import ComingSoon from './routes/ComingSoon'
@@ -13,20 +11,14 @@ import Channels from './routes/channels/Channels'
 import ChannelDetail from './routes/channels/ChannelDetail'
 import ReverseVideoDetail from './routes/channels/VideoDetail'
 
+// Single-user personal deployment — no login gate (see CLAUDE.md).
 function App() {
   return (
     <ThemeProvider>
       <BrowserRouter>
         <AuthProvider>
           <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route
-              element={
-                <ProtectedRoute>
-                  <AppShell />
-                </ProtectedRoute>
-              }
-            >
+            <Route element={<AppShell />}>
               <Route index element={<Dashboard />} />
               <Route path="/study" element={<StudyEngine />} />
               <Route path="/study/:videoId" element={<VideoDetail />} />

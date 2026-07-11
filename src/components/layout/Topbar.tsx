@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { Moon, Sun, LogOut } from 'lucide-react'
+import { Moon, Sun } from 'lucide-react'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useAuth } from '../../contexts/AuthContext'
 
@@ -10,9 +10,9 @@ const LANGUAGES = [
 ]
 
 export default function Topbar() {
-  const { t, i18n } = useTranslation()
+  const { i18n } = useTranslation()
   const { theme, toggleTheme } = useTheme()
-  const { profile, signOut } = useAuth()
+  const { profile } = useAuth()
 
   return (
     <header className="flex h-14 shrink-0 items-center justify-between border-b border-neutral-200 bg-white px-6 dark:border-neutral-800 dark:bg-neutral-950">
@@ -43,15 +43,6 @@ export default function Topbar() {
         {profile && (
           <span className="text-sm text-neutral-600 dark:text-neutral-400">{profile.email}</span>
         )}
-
-        <button
-          type="button"
-          onClick={() => signOut()}
-          className="flex items-center gap-1 rounded-md p-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-900"
-          aria-label={t('auth.signOut')}
-        >
-          <LogOut size={16} />
-        </button>
       </div>
     </header>
   )

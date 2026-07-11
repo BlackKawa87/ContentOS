@@ -51,42 +51,47 @@ as $$
 $$;
 
 -- ---------------------------------------------------------------------------
--- Enable RLS on every business table.
+-- RLS disabled: single-user personal deployment, no login (see CLAUDE.md).
+-- Every `create policy` statement below this point is now inert (a disabled
+-- table ignores its policies entirely) — left in place as a historical record
+-- rather than deleted, in case multi-user auth is ever reintroduced. The
+-- on_auth_user_created trigger and is_admin() helper above are similarly
+-- dormant: harmless, since no new auth.users rows will ever be created.
 -- ---------------------------------------------------------------------------
 
-alter table public.profiles enable row level security;
-alter table public.projects enable row level security;
-alter table public.videos enable row level security;
-alter table public.processing_jobs enable row level security;
-alter table public.transcripts enable row level security;
-alter table public.translations enable row level security;
-alter table public.narration_assets enable row level security;
-alter table public.slide_decks enable row level security;
-alter table public.study_video_assets enable row level security;
-alter table public.glossaries enable row level security;
-alter table public.quizzes enable row level security;
-alter table public.quiz_questions enable row level security;
-alter table public.flashcards enable row level security;
-alter table public.channels enable row level security;
-alter table public.playlists enable row level security;
-alter table public.video_analyses enable row level security;
-alter table public.video_transcripts enable row level security;
-alter table public.transcript_segments enable row level security;
-alter table public.timeline_segments enable row level security;
-alter table public.narrative_analyses enable row level security;
-alter table public.visual_scenes enable row level security;
-alter table public.audio_metrics enable row level security;
-alter table public.channel_analyses enable row level security;
-alter table public.viral_dna_profiles enable row level security;
-alter table public.viral_dna_scores enable row level security;
-alter table public.viral_dna_hypotheses enable row level security;
-alter table public.viral_dna_evidence enable row level security;
-alter table public.viral_dna_validation_results enable row level security;
-alter table public.content_builder_outputs enable row level security;
-alter table public.knowledge_base_entries enable row level security;
-alter table public.api_usage_logs enable row level security;
-alter table public.audit_logs enable row level security;
-alter table public.storage_assets enable row level security;
+alter table public.profiles disable row level security;
+alter table public.projects disable row level security;
+alter table public.videos disable row level security;
+alter table public.processing_jobs disable row level security;
+alter table public.transcripts disable row level security;
+alter table public.translations disable row level security;
+alter table public.narration_assets disable row level security;
+alter table public.slide_decks disable row level security;
+alter table public.study_video_assets disable row level security;
+alter table public.glossaries disable row level security;
+alter table public.quizzes disable row level security;
+alter table public.quiz_questions disable row level security;
+alter table public.flashcards disable row level security;
+alter table public.channels disable row level security;
+alter table public.playlists disable row level security;
+alter table public.video_analyses disable row level security;
+alter table public.video_transcripts disable row level security;
+alter table public.transcript_segments disable row level security;
+alter table public.timeline_segments disable row level security;
+alter table public.narrative_analyses disable row level security;
+alter table public.visual_scenes disable row level security;
+alter table public.audio_metrics disable row level security;
+alter table public.channel_analyses disable row level security;
+alter table public.viral_dna_profiles disable row level security;
+alter table public.viral_dna_scores disable row level security;
+alter table public.viral_dna_hypotheses disable row level security;
+alter table public.viral_dna_evidence disable row level security;
+alter table public.viral_dna_validation_results disable row level security;
+alter table public.content_builder_outputs disable row level security;
+alter table public.knowledge_base_entries disable row level security;
+alter table public.api_usage_logs disable row level security;
+alter table public.audit_logs disable row level security;
+alter table public.storage_assets disable row level security;
 
 -- ---------------------------------------------------------------------------
 -- profiles

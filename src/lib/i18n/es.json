@@ -8,15 +8,6 @@
     "knowledgeBase": "Base de Conocimiento",
     "settings": "Configuración"
   },
-  "auth": {
-    "signIn": "Iniciar sesión",
-    "signUp": "Crear cuenta",
-    "email": "Email",
-    "password": "Contraseña",
-    "signOut": "Cerrar sesión",
-    "noAccount": "¿No tienes una cuenta?",
-    "hasAccount": "¿Ya tienes una cuenta?"
-  },
   "dashboard": {
     "title": "Panel",
     "projects": "Proyectos",

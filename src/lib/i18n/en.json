@@ -8,15 +8,6 @@
     "knowledgeBase": "Knowledge Base",
     "settings": "Settings"
   },
-  "auth": {
-    "signIn": "Sign in",
-    "signUp": "Create account",
-    "email": "Email",
-    "password": "Password",
-    "signOut": "Sign out",
-    "noAccount": "Don't have an account?",
-    "hasAccount": "Already have an account?"
-  },
   "dashboard": {
     "title": "Dashboard",
     "projects": "Projects",

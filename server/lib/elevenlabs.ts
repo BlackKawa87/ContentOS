@@ -1,6 +1,6 @@
 import { ElevenLabsClient } from 'elevenlabs'
-import { prisma } from './prisma'
-import { decryptSecret } from './encryption'
+import { prisma } from './prisma.js'
+import { decryptSecret } from './encryption.js'
 
 /** Resolves the ElevenLabs client to use for a given profile: their own key if set, else the platform default. */
 export async function getElevenLabsClientForProfile(profileId: string): Promise<ElevenLabsClient> {

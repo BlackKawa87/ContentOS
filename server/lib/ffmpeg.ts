@@ -5,7 +5,7 @@ import { writeFile, readFile, unlink, mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
-import { unwrapDefault } from './interop'
+import { unwrapDefault } from './interop.js'
 
 // Both packages' default exports get inconsistently unwrapped across
 // tsx/local vs Vercel's build — see the interop note in CLAUDE.md.

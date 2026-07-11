@@ -3,7 +3,7 @@ import { readFile, writeFile, unlink, chmod, stat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
-import { unwrapDefault } from './interop'
+import { unwrapDefault } from './interop.js'
 
 const YtDlpWrap = unwrapDefault<typeof import('yt-dlp-wrap').default>(YtDlpWrapModule)
 

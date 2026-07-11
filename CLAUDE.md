@@ -35,6 +35,15 @@ narration track) instead of Remotion. This sandbox has no system Chrome and Remo
 Chromium download was judged too slow/fragile to justify given the session's cost. Revisit Remotion
 later if richer slide animation is wanted — see `server/lib/ffmpeg.ts` / `server/studyPipeline/renderVideo.ts`.
 
+**Relative imports in `api/`/`server/` need explicit `.js` extensions** (e.g.
+`from '../lib/prisma.js'` even though the file is `prisma.ts`) — this is a pure-ESM
+(`"type": "module"`) + NodeNext-resolution project, and Node's runtime ESM loader does not
+auto-append extensions the way `bundler` resolution or CJS `require` do. Getting this wrong
+doesn't fail locally (`tsx` resolves it fine either way) but crashes every `/api` function in
+production with `ERR_MODULE_NOT_FOUND` — this happened on the first real deploy. `tsconfig.server.json`
+uses `module`/`moduleResolution: "nodenext"` specifically so `tsc --noEmit` catches this locally
+before it ever reaches Vercel.
+
 **CJS default-export interop gotcha**: `import X from 'some-cjs-package'` under tsx/Node ESM
 sometimes yields the real class, sometimes the whole module, sometimes a double-wrapped
 `{ default: { default: Class } }` (hit this with both `yt-dlp-wrap` and `pptxgenjs`, each

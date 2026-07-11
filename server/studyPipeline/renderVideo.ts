@@ -1,10 +1,10 @@
 import sharp from 'sharp'
-import type { VideoModel as Video } from '../generated/prisma/models'
-import { prisma } from '../lib/prisma'
-import { composeStudyVideo } from '../lib/ffmpeg'
-import { uploadAsset } from '../lib/storage'
-import { downloadAsset, getVideoContext } from './common'
-import { buildSlidePlan, type SlidePlanItem } from './slidePlan'
+import type { VideoModel as Video } from '../generated/prisma/models.js'
+import { prisma } from '../lib/prisma.js'
+import { composeStudyVideo } from '../lib/ffmpeg.js'
+import { uploadAsset } from '../lib/storage.js'
+import { downloadAsset, getVideoContext } from './common.js'
+import { buildSlidePlan, type SlidePlanItem } from './slidePlan.js'
 
 const WIDTH = 1280
 const HEIGHT = 720

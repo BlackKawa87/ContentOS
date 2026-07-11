@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { requireUser, HttpError } from '../../server/lib/auth'
-import { prisma } from '../../server/lib/prisma'
+import { requireUser, HttpError } from '../../server/lib/auth.js'
+import { prisma } from '../../server/lib/prisma.js'
 
 const LANGUAGES = ['EN', 'PT', 'ES'] as const
 const THEMES = ['LIGHT', 'DARK'] as const

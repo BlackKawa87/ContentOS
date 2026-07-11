@@ -1,7 +1,7 @@
-import type { VideoModel as Video } from '../generated/prisma/models'
-import { extractAudio as ffmpegExtractAudio } from '../lib/ffmpeg'
-import { uploadAsset } from '../lib/storage'
-import { downloadAsset, getVideoContext } from './common'
+import type { VideoModel as Video } from '../generated/prisma/models.js'
+import { extractAudio as ffmpegExtractAudio } from '../lib/ffmpeg.js'
+import { uploadAsset } from '../lib/storage.js'
+import { downloadAsset, getVideoContext } from './common.js'
 
 export async function extractAudioStage(video: Video): Promise<void> {
   const { projectId, profile } = await getVideoContext(video)

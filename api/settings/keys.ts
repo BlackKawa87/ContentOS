@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { requireUser, HttpError } from '../../server/lib/auth'
-import { prisma } from '../../server/lib/prisma'
-import { encryptSecret } from '../../server/lib/encryption'
+import { requireUser, HttpError } from '../../server/lib/auth.js'
+import { prisma } from '../../server/lib/prisma.js'
+import { encryptSecret } from '../../server/lib/encryption.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {

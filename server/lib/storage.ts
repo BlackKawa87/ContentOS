@@ -1,6 +1,6 @@
-import { supabaseAdmin } from './supabaseAdmin'
-import { prisma } from './prisma'
-import type { StorageBucket } from '../generated/prisma/enums'
+import { supabaseAdmin } from './supabaseAdmin.js'
+import { prisma } from './prisma.js'
+import type { StorageBucket } from '../generated/prisma/enums.js'
 
 /** Uploads a buffer to Supabase Storage under `${ownerId}/${videoId}/${filename}` and records a StorageAsset row. */
 export async function uploadAsset(opts: {

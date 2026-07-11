@@ -1,10 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { requireUser, HttpError } from '../../server/lib/auth'
+import { requireUser, HttpError } from '../../server/lib/auth.js'
 import {
   advanceJob,
   advanceNextPendingJob,
   advanceNextPendingJobForVideo,
-} from '../../server/lib/queue'
+} from '../../server/lib/queue.js'
 
 export const config = { maxDuration: 300 }
 

@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { requireUser, HttpError } from '../../server/lib/auth'
-import { prisma } from '../../server/lib/prisma'
+import { requireUser, HttpError } from '../../server/lib/auth.js'
+import { prisma } from '../../server/lib/prisma.js'
 
 function detectSourceType(url: string): 'YOUTUBE_VIDEO' | 'YOUTUBE_PLAYLIST' | 'MP4' | 'MP3' {
   if (/[?&]list=/.test(url)) return 'YOUTUBE_PLAYLIST'

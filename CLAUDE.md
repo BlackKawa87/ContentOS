@@ -122,3 +122,96 @@ user-configurable), which is a data concern, not a UI-copy concern.
 
 Premium SaaS look: clean, minimal, fast. Light theme by default, dark theme available via a
 `.dark` class toggle (Tailwind `dark:` variant), persisted client-side.
+
+## Phase 3 — Viral DNA Engine
+
+Consumes Phase 2's per-video outputs and synthesizes a measurable, evidence-based, versioned
+profile per video. Entry gate is `VideoAnalysis.readyForViralDnaAt IS NOT NULL` (not a
+`VideoStatus` value — the spec's "READY_FOR_VIRAL_DNA video status" doesn't exist as one;
+Phase 2 sets `Video.status = 'COMPLETED'` generically on finishing, so this timestamp is the
+precise signal). Terminal `VideoStatus` is `VIRAL_DNA_COMPLETED`.
+
+**Pipeline** (`server/viralDnaPipeline/`, one file per stage, same convention as
+`studyPipeline`/`reverseEnginePipeline`/`videoAnalysisPipeline` — no service-class layer):
+`VIRAL_DNA_QUEUED` (entry, no handler) → `INPUTS_VALIDATED` → `METRICS_NORMALIZED` →
+`HOOK_PROFILE_GENERATED` → `NARRATIVE_PROFILE_GENERATED` → `RETENTION_PROFILE_GENERATED` →
+`VISUAL_PROFILE_GENERATED` → `AUDIO_PROFILE_GENERATED` → `EMOTION_PROFILE_GENERATED` →
+`PERFORMANCE_PROFILE_GENERATED` → `VIRAL_DNA_SYNTHESIZED` → `VIRAL_DNA_VALIDATED` →
+`VIRAL_DNA_COMPLETED`. `server/lib/queue.ts` dispatches on `JobPipeline.VIRAL_DNA` alongside
+STUDY/REVERSE_CHANNEL_IMPORT/VIDEO_ANALYSIS — all three video-scoped pipelines share the same
+`entityUpdate` branch, but each gets its own terminal `VideoStatus` via `videoTerminalStatus()`.
+
+~7 OpenAI (`gpt-4o-mini`) calls per video total — hook, narrative (+ info-density), retention,
+visual (light, text-only — no frames re-sent), audio (light, text sample), emotion, hypotheses.
+Everything else (metric normalization, the 19-score scorecard, performance profile) is
+deterministic code, per the spec's own cost-control rule ("use AI only for semantic
+interpretation"). Each AI-calling stage validates enum returns against the allowed set before
+writing to Postgres — `narrativeAnalyzedStage` in Phase 2 hit a real bug here (the model
+returned a `HookType` value in a `NarrativePattern` field since both were listed in one
+prompt); every Phase 3 stage guards against the same failure mode from the start.
+
+**Schema**: `ViralDnaProfile` is one row **per version** (`videoId + profileVersion` unique,
+`isCurrent` marks the active one) — not the 1:1-with-`ChannelAnalysis` placeholder it started
+as; that FK was repurposed to `videoId` since the whole workflow is per-video. Flat columns
+hold Module 19's comparison-ready fields (primaryHookType, averageWordsPerMinute, etc.); deep
+sections (`hook`, `narrative`, `retention`, `visual`, `audio`, `emotion`,
+`informationDensity`, `performance`, `metrics`) are JSONB. Child tables: `ViralDnaScore` (19
+rows per profile — 15 named + 4 overall, each with `formulaVersion` + the raw `inputs` that
+fed it), `ViralDnaHypothesis`, `ViralDnaEvidence` (evidenceId keys referenced from the JSON
+sections), `ViralDnaValidationResult`. `sourceSnapshot` stores Phase 2 tables' `updatedAt` at
+generation time — stands in for the spec's `sourceVersions` since Phase 2 doesn't version its
+own outputs.
+
+**Scoring** (`server/viralDnaPipeline/viralDnaSynthesized.ts`, `FORMULA_VERSION = '1.0.0'`):
+every score is a documented, code-computed weighted formula over already-generated metrics/
+confidences — AI never invents a score, only feeds inputs into it via the sub-profile stages.
+Ideal-value targets (e.g. hook duration ~10% of runtime, ~155 wpm pacing) are first-pass
+estimates meant to be tuned once real comparative data exists across many videos, not
+empirically derived yet.
+
+**Evidence & confidence**: every AI-generated section carries its own `confidence` (0-1) and,
+where applicable, an `evidence` string with a quoted/paraphrased source line; `ViralDnaEvidence`
+rows additionally back specific claims with `sourceType`/`sourceId`/timestamps for the UI's
+click-to-jump. Emotion is explicitly flagged `inferred: true` and never treated as measured
+fact. Performance correlations are stated as co-occurrence ("this pattern appears in a video
+with outlier score 4.2"), never causation — enforced via the hypotheses-stage system prompt.
+
+**Validation** (`viralDnaValidatedStage`, Module 15): checks all 8 mandatory sections exist,
+all 19 scores are in range and current-formula-version, timestamps/percentages are sane,
+evidence rows exist and belong to the right profile. Blocking errors **throw** — the job fails
+with the specific error list rather than silently completing an incomplete profile. Non-blocking
+issues land in `ViralDnaValidationResult.warnings`/`unsupportedClaims`/`missingEvidence`.
+
+**Versioning/editing**: `edit.ts` clones the current version (+ its scores/hypotheses/evidence)
+into `profileVersion + 1` with corrections applied, flips `isCurrent`, and audit-logs the diff —
+the original version is never mutated. `regenerateStage.ts` (partial regeneration) instead
+patches one JSON section of the *current* draft in place without bumping the version, then
+re-runs the validator.
+
+**API** (`api/viralDna/`): 7 endpoints — `select` (start, enforces a max-3-concurrent-jobs
+safeguard + returns a cost estimate), `worker`/`retry` (pipeline-agnostic, reused verbatim from
+`api/videoAnalysis/`), `regenerateStage`, `approve`, `edit`, `export`. Status/pause/resume/
+list-versions/compare-versions need no dedicated endpoint — status is a direct `supabase-js`
+read (same pattern `ChannelDetail.tsx` already uses), pause/resume are inherent to the
+one-stage-per-invocation queue design, versions are listed/diffed client-side.
+
+**UI**: `src/routes/channels/VideoDetail.tsx` (`/channels/:channelId/videos/:videoId`) — a page
+that didn't exist before Phase 3 (Phase 2 shipped backend-only). Overview tab shows raw Phase 2
+data (transcript/timeline/narrative/visual/audio); Viral DNA tab has the real work (summary,
+scorecard chart, hypotheses with reject-and-save, evidence, versions, raw JSON). Uses
+`recharts` (first chart library in the repo) for the emotion curve and scorecard.
+
+**Known limitations**: `AudioMetric` only persists aggregate pause stats, not individual pause
+durations, so `audio.longestPause` in the Viral DNA profile is an approximation (the average),
+not a true max — re-running silence detection just for that one field wasn't worth
+re-downloading the audio. Background-music/sound-effect presence is inferred from transcript
+text only (no actual audio classification), always at low confidence. Evidence "click to jump"
+scrolls to the Overview tab's timeline rather than seeking an embedded video player, since no
+player exists in the UI yet.
+
+## Next phase
+
+Phase 4 — Channel Blueprint Engine (not started). `ViralDnaProfile`'s flat comparison columns
+(primaryHookType, averageWordsPerMinute, sceneChangesPerMinute, outlierScoreSnapshot, etc.) are
+already queryable without parsing the JSON sections, per Module 19's comparison-readiness
+requirement.

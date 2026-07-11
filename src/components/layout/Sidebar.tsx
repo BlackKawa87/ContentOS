@@ -2,7 +2,6 @@ import { NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
   LayoutDashboard,
-  GraduationCap,
   Sparkles,
   Wand2,
   Library,
@@ -11,8 +10,7 @@ import {
 
 const items = [
   { to: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard, end: true },
-  { to: '/study', labelKey: 'nav.studyEngine', icon: GraduationCap },
-  { to: '/reverse-engineering', labelKey: 'nav.reverseEngineering', icon: Sparkles },
+  { to: '/channels', labelKey: 'nav.reverseEngineering', icon: Sparkles },
   { to: '/content-builder', labelKey: 'nav.contentBuilder', icon: Wand2 },
   { to: '/knowledge-base', labelKey: 'nav.knowledgeBase', icon: Library },
 ]

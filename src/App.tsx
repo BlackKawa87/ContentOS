@@ -9,6 +9,8 @@ import Settings from './routes/Settings'
 import ComingSoon from './routes/ComingSoon'
 import StudyEngine from './routes/study/StudyEngine'
 import VideoDetail from './routes/study/VideoDetail'
+import Channels from './routes/channels/Channels'
+import ChannelDetail from './routes/channels/ChannelDetail'
 
 function App() {
   return (
@@ -27,10 +29,8 @@ function App() {
               <Route index element={<Dashboard />} />
               <Route path="/study" element={<StudyEngine />} />
               <Route path="/study/:videoId" element={<VideoDetail />} />
-              <Route
-                path="/reverse-engineering"
-                element={<ComingSoon title="Reverse Engineering Engine" />}
-              />
+              <Route path="/channels" element={<Channels />} />
+              <Route path="/channels/:channelId" element={<ChannelDetail />} />
               <Route path="/content-builder" element={<ComingSoon title="Content Builder" />} />
               <Route path="/knowledge-base" element={<ComingSoon title="Knowledge Base" />} />
               <Route path="/settings" element={<Settings />} />

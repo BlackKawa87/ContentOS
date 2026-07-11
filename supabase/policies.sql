@@ -1,5 +1,5 @@
 -- ContentOS: RLS policies + auth bootstrap trigger.
--- Applied once via: npx prisma db execute --file=supabase/policies.sql --schema=prisma/schema.prisma
+-- Applied once via: npx prisma db execute --file=supabase/policies.sql
 -- Idempotent: safe to re-run (drops/recreates policies and the trigger).
 
 create extension if not exists pgcrypto;
@@ -67,6 +67,8 @@ alter table public.glossaries enable row level security;
 alter table public.quizzes enable row level security;
 alter table public.quiz_questions enable row level security;
 alter table public.flashcards enable row level security;
+alter table public.channels enable row level security;
+alter table public.playlists enable row level security;
 alter table public.channel_analyses enable row level security;
 alter table public.viral_dna_profiles enable row level security;
 alter table public.content_builder_outputs enable row level security;
@@ -120,14 +122,28 @@ create policy "videos_all" on public.videos
 drop policy if exists "processing_jobs_all" on public.processing_jobs;
 create policy "processing_jobs_all" on public.processing_jobs
   for all
-  using (exists (
-    select 1 from public.videos v join public.projects p on p.id = v."projectId"
-    where v.id = processing_jobs."videoId" and (p."ownerId" = auth.uid() or public.is_admin())
-  ))
-  with check (exists (
-    select 1 from public.videos v join public.projects p on p.id = v."projectId"
-    where v.id = processing_jobs."videoId" and (p."ownerId" = auth.uid() or public.is_admin())
-  ));
+  using (
+    (processing_jobs."videoId" is not null and exists (
+      select 1 from public.videos v join public.projects p on p.id = v."projectId"
+      where v.id = processing_jobs."videoId" and (p."ownerId" = auth.uid() or public.is_admin())
+    ))
+    or
+    (processing_jobs."channelId" is not null and exists (
+      select 1 from public.channels c join public.projects p on p.id = c."projectId"
+      where c.id = processing_jobs."channelId" and (p."ownerId" = auth.uid() or public.is_admin())
+    ))
+  )
+  with check (
+    (processing_jobs."videoId" is not null and exists (
+      select 1 from public.videos v join public.projects p on p.id = v."projectId"
+      where v.id = processing_jobs."videoId" and (p."ownerId" = auth.uid() or public.is_admin())
+    ))
+    or
+    (processing_jobs."channelId" is not null and exists (
+      select 1 from public.channels c join public.projects p on p.id = c."projectId"
+      where c.id = processing_jobs."channelId" and (p."ownerId" = auth.uid() or public.is_admin())
+    ))
+  );
 
 drop policy if exists "transcripts_all" on public.transcripts;
 create policy "transcripts_all" on public.transcripts
@@ -244,6 +260,30 @@ create policy "flashcards_all" on public.flashcards
 -- ---------------------------------------------------------------------------
 -- Reverse Engineering / Content Builder / Knowledge Base (via project)
 -- ---------------------------------------------------------------------------
+
+drop policy if exists "channels_all" on public.channels;
+create policy "channels_all" on public.channels
+  for all
+  using (exists (
+    select 1 from public.projects p
+    where p.id = channels."projectId" and (p."ownerId" = auth.uid() or public.is_admin())
+  ))
+  with check (exists (
+    select 1 from public.projects p
+    where p.id = channels."projectId" and (p."ownerId" = auth.uid() or public.is_admin())
+  ));
+
+drop policy if exists "playlists_all" on public.playlists;
+create policy "playlists_all" on public.playlists
+  for all
+  using (exists (
+    select 1 from public.channels c join public.projects p on p.id = c."projectId"
+    where c.id = playlists."channelId" and (p."ownerId" = auth.uid() or public.is_admin())
+  ))
+  with check (exists (
+    select 1 from public.channels c join public.projects p on p.id = c."projectId"
+    where c.id = playlists."channelId" and (p."ownerId" = auth.uid() or public.is_admin())
+  ));
 
 drop policy if exists "channel_analyses_all" on public.channel_analyses;
 create policy "channel_analyses_all" on public.channel_analyses

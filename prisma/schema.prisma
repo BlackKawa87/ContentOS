@@ -52,10 +52,17 @@ enum VideoSourceType {
 }
 
 enum VideoStatus {
+  NOT_IMPORTED
+  READY
   QUEUED
   PROCESSING
   COMPLETED
   FAILED
+}
+
+enum JobPipeline {
+  STUDY
+  REVERSE_CHANNEL_IMPORT
 }
 
 enum JobStage {
@@ -70,6 +77,10 @@ enum JobStage {
   QUIZ_GENERATED
   FLASHCARDS_GENERATED
   EXPORTED
+  CHANNEL_METADATA_FETCHED
+  VIDEOS_LISTED
+  VIDEOS_METADATA_FETCHED
+  STATS_CALCULATED
   COMPLETED
   FAILED
 }
@@ -79,6 +90,20 @@ enum JobStatus {
   RUNNING
   SUCCEEDED
   FAILED
+}
+
+enum ChannelStatus {
+  PENDING
+  IMPORTING
+  READY
+  FAILED
+}
+
+enum OutlierClass {
+  NORMAL
+  ABOVE_AVERAGE
+  STRONG_OUTLIER
+  VIRAL_OUTLIER
 }
 
 enum ApiProvider {
@@ -127,6 +152,13 @@ model Profile {
   openaiApiKeyEnc     Bytes?
   elevenlabsApiKeyEnc Bytes?
 
+  reverseDefaultImportLimit Int   @default(25)
+  reverseMaxVideos          Int   @default(100)
+  reverseMaxPlaylists       Int   @default(10)
+  outlierAboveAvgMultiplier Float @default(2)
+  outlierStrongMultiplier   Float @default(5)
+  outlierViralMultiplier    Float @default(10)
+
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
@@ -157,6 +189,7 @@ model Project {
   deletedAt DateTime?
 
   videos               Video[]
+  channels             Channel[]
   channelAnalyses      ChannelAnalysis[]
   contentBuilderOutputs ContentBuilderOutput[]
   knowledgeBaseEntries KnowledgeBaseEntry[]
@@ -178,6 +211,28 @@ model Video {
   durationSec Int?
   status      VideoStatus     @default(QUEUED)
 
+  // Reverse Engineering Engine: channel-imported video metadata (all optional — unused by Study Engine)
+  channel        Channel?      @relation(fields: [channelId], references: [id])
+  channelId      String?       @db.Uuid
+  playlist       Playlist?     @relation(fields: [playlistId], references: [id])
+  playlistId     String?       @db.Uuid
+  youtubeVideoId String?
+  thumbnailUrl   String?
+  publishedAt    DateTime?
+  language       String?
+  tags           Json?
+  chapters       Json?
+
+  views        Int?
+  likes        Int?
+  comments     Int?
+  viewsPerDay  Float?
+  viewsPerHour Float?
+  ageInDays    Int?
+
+  outlierScore Float?
+  outlierClass OutlierClass?
+
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
@@ -197,7 +252,64 @@ model Video {
 
   @@index([projectId])
   @@index([status])
+  @@index([channelId])
+  @@index([playlistId])
+  @@index([youtubeVideoId])
   @@map("videos")
+}
+
+// ---------------------------------------------------------------------------
+// Reverse Engineering Engine: Channel Importer (Phase 1)
+// ---------------------------------------------------------------------------
+
+model Channel {
+  id     String  @id @default(uuid()) @db.Uuid
+  project Project @relation(fields: [projectId], references: [id])
+  projectId String @db.Uuid
+
+  sourceUrl        String
+  youtubeChannelId String?
+  handle           String?
+  title            String?
+  description      String?
+  thumbnailUrl     String?
+  bannerUrl        String?
+  language         String?
+  country          String?
+  status           ChannelStatus @default(PENDING)
+
+  createdAt  DateTime  @default(now())
+  importedAt DateTime?
+  lastSyncAt DateTime?
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+
+  playlists      Playlist[]
+  videos         Video[]
+  processingJobs ProcessingJob[]
+
+  @@index([projectId])
+  @@map("channels")
+}
+
+model Playlist {
+  id      String  @id @default(uuid()) @db.Uuid
+  channel Channel @relation(fields: [channelId], references: [id])
+  channelId String @db.Uuid
+
+  youtubePlaylistId String
+  title             String?
+  description       String?
+  thumbnailUrl      String?
+  videoCount        Int?
+
+  createdAt  DateTime  @default(now())
+  importedAt DateTime?
+
+  videos Video[]
+
+  @@index([channelId])
+  @@map("playlists")
 }
 
 // ---------------------------------------------------------------------------
@@ -206,8 +318,11 @@ model Video {
 
 model ProcessingJob {
   id        String    @id @default(uuid()) @db.Uuid
-  video     Video     @relation(fields: [videoId], references: [id])
-  videoId   String    @db.Uuid
+  pipeline  JobPipeline @default(STUDY)
+  video     Video?    @relation(fields: [videoId], references: [id])
+  videoId   String?   @db.Uuid
+  channel   Channel?  @relation(fields: [channelId], references: [id])
+  channelId String?   @db.Uuid
   stage     JobStage  @default(QUEUED)
   status    JobStatus @default(PENDING)
   attempts  Int       @default(0)
@@ -222,6 +337,7 @@ model ProcessingJob {
   updatedAt   DateTime  @updatedAt
 
   @@index([videoId])
+  @@index([channelId])
   @@index([stage, status])
   @@map("processing_jobs")
 }

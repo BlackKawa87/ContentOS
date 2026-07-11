@@ -11,4 +11,10 @@ export interface Profile {
   translationLang: Language
   defaultVoiceId: string | null
   theme: Theme
+  reverseDefaultImportLimit: number
+  reverseMaxVideos: number
+  reverseMaxPlaylists: number
+  outlierAboveAvgMultiplier: number
+  outlierStrongMultiplier: number
+  outlierViralMultiplier: number
 }

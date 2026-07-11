@@ -35,6 +35,50 @@
     "defaultLanguage": "Default Language",
     "translationLanguage": "Translation Language",
     "theme": "Theme",
-    "save": "Save"
+    "save": "Save",
+    "reverseDefaultImportLimit": "Default import limit",
+    "reverseMaxVideos": "Maximum videos",
+    "reverseMaxPlaylists": "Maximum playlists",
+    "outlierAboveAvg": "Above Average threshold (× median)",
+    "outlierStrong": "Strong Outlier threshold (× median)",
+    "outlierViral": "Viral Outlier threshold (× median)"
+  },
+  "channels": {
+    "title": "Channels",
+    "importedChannels": "Imported Channels",
+    "importedVideos": "Imported Videos",
+    "readyForAnalysis": "Videos Ready For Analysis",
+    "averageViews": "Average Views",
+    "medianViews": "Median Views",
+    "importPlaceholder": "Paste a channel, playlist, or video URL…",
+    "importButton": "Import",
+    "noChannels": "No channels imported yet — paste a YouTube URL above to start.",
+    "tabs": {
+      "overview": "Overview",
+      "videos": "Videos",
+      "statistics": "Statistics",
+      "outliers": "Outliers",
+      "processing": "Processing Status"
+    },
+    "filters": {
+      "all": "All",
+      "ready": "Ready",
+      "analyzed": "Analyzed",
+      "pending": "Pending",
+      "failed": "Failed",
+      "aboveAverage": "Above Average",
+      "viral": "Viral"
+    },
+    "columns": {
+      "thumbnail": "Thumbnail",
+      "title": "Title",
+      "published": "Published",
+      "duration": "Duration",
+      "views": "Views",
+      "viewsPerDay": "Views/Day",
+      "outlierScore": "Outlier Score",
+      "status": "Status",
+      "actions": "Actions"
+    }
   }
 }

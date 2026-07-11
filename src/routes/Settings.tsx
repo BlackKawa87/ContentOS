@@ -32,6 +32,20 @@ export default function Settings() {
   const [defaultVoiceId, setDefaultVoiceId] = useState(profile?.defaultVoiceId ?? '')
   const [defaultLanguage, setDefaultLanguage] = useState(profile?.defaultLanguage ?? 'EN')
   const [translationLang, setTranslationLang] = useState(profile?.translationLang ?? 'PT')
+  const [reverseDefaultImportLimit, setReverseDefaultImportLimit] = useState(
+    profile?.reverseDefaultImportLimit ?? 25,
+  )
+  const [reverseMaxVideos, setReverseMaxVideos] = useState(profile?.reverseMaxVideos ?? 100)
+  const [reverseMaxPlaylists, setReverseMaxPlaylists] = useState(profile?.reverseMaxPlaylists ?? 10)
+  const [outlierAboveAvgMultiplier, setOutlierAboveAvgMultiplier] = useState(
+    profile?.outlierAboveAvgMultiplier ?? 2,
+  )
+  const [outlierStrongMultiplier, setOutlierStrongMultiplier] = useState(
+    profile?.outlierStrongMultiplier ?? 5,
+  )
+  const [outlierViralMultiplier, setOutlierViralMultiplier] = useState(
+    profile?.outlierViralMultiplier ?? 10,
+  )
   const [savedMessage, setSavedMessage] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
@@ -47,6 +61,12 @@ export default function Settings() {
     setDefaultVoiceId(profile.defaultVoiceId ?? '')
     setDefaultLanguage(profile.defaultLanguage)
     setTranslationLang(profile.translationLang)
+    setReverseDefaultImportLimit(profile.reverseDefaultImportLimit)
+    setReverseMaxVideos(profile.reverseMaxVideos)
+    setReverseMaxPlaylists(profile.reverseMaxPlaylists)
+    setOutlierAboveAvgMultiplier(profile.outlierAboveAvgMultiplier)
+    setOutlierStrongMultiplier(profile.outlierStrongMultiplier)
+    setOutlierViralMultiplier(profile.outlierViralMultiplier)
   }, [profile])
 
   async function handleSaveKeys(e: FormEvent) {
@@ -72,6 +92,26 @@ export default function Settings() {
     await authedFetch('/api/settings/profile', {
       method: 'PUT',
       body: JSON.stringify({ defaultVoiceId, defaultLanguage, translationLang }),
+    })
+    await refreshProfile()
+    setSaving(false)
+    setSavedMessage(t('settings.save'))
+  }
+
+  async function handleSaveReverseSettings(e: FormEvent) {
+    e.preventDefault()
+    setSaving(true)
+    setSavedMessage(null)
+    await authedFetch('/api/settings/profile', {
+      method: 'PUT',
+      body: JSON.stringify({
+        reverseDefaultImportLimit,
+        reverseMaxVideos,
+        reverseMaxPlaylists,
+        outlierAboveAvgMultiplier,
+        outlierStrongMultiplier,
+        outlierViralMultiplier,
+      }),
     })
     await refreshProfile()
     setSaving(false)
@@ -176,6 +216,92 @@ export default function Settings() {
             <option value="PT">Português</option>
             <option value="ES">Español</option>
           </select>
+        </label>
+
+        <button
+          type="submit"
+          disabled={saving}
+          className="self-start rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-700 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
+        >
+          {t('settings.save')}
+        </button>
+      </form>
+
+      <form
+        onSubmit={handleSaveReverseSettings}
+        className="mt-8 flex flex-col gap-4 rounded-lg border border-neutral-200 p-5 dark:border-neutral-800"
+      >
+        <h2 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+          {t('nav.reverseEngineering')}
+        </h2>
+
+        <label className={labelClass}>
+          {t('settings.reverseDefaultImportLimit')}
+          <input
+            type="number"
+            min={1}
+            value={reverseDefaultImportLimit}
+            onChange={(e) => setReverseDefaultImportLimit(Number(e.target.value))}
+            className={inputClass}
+          />
+        </label>
+
+        <label className={labelClass}>
+          {t('settings.reverseMaxVideos')}
+          <input
+            type="number"
+            min={1}
+            value={reverseMaxVideos}
+            onChange={(e) => setReverseMaxVideos(Number(e.target.value))}
+            className={inputClass}
+          />
+        </label>
+
+        <label className={labelClass}>
+          {t('settings.reverseMaxPlaylists')}
+          <input
+            type="number"
+            min={1}
+            value={reverseMaxPlaylists}
+            onChange={(e) => setReverseMaxPlaylists(Number(e.target.value))}
+            className={inputClass}
+          />
+        </label>
+
+        <label className={labelClass}>
+          {t('settings.outlierAboveAvg')}
+          <input
+            type="number"
+            min={1}
+            step={0.5}
+            value={outlierAboveAvgMultiplier}
+            onChange={(e) => setOutlierAboveAvgMultiplier(Number(e.target.value))}
+            className={inputClass}
+          />
+        </label>
+
+        <label className={labelClass}>
+          {t('settings.outlierStrong')}
+          <input
+            type="number"
+            min={1}
+            step={0.5}
+            value={outlierStrongMultiplier}
+            onChange={(e) => setOutlierStrongMultiplier(Number(e.target.value))}
+            className={inputClass}
+          />
+        </label>
+
+        <label className={labelClass}>
+          {t('settings.outlierViral')}
+          <input
+            type="number"
+            min={1}
+            step={0.5}
+            value={outlierViralMultiplier}
+            onChange={(e) => setOutlierViralMultiplier(Number(e.target.value))}
+            className={inputClass}
+          />
         </label>
 
         <button

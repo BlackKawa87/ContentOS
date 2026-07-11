@@ -63,6 +63,7 @@ enum VideoStatus {
 enum JobPipeline {
   STUDY
   REVERSE_CHANNEL_IMPORT
+  VIDEO_ANALYSIS
 }
 
 enum JobStage {
@@ -81,8 +82,81 @@ enum JobStage {
   VIDEOS_LISTED
   VIDEOS_METADATA_FETCHED
   STATS_CALCULATED
+  VIDEO_SELECTED
+  VIDEO_DOWNLOADED
+  AUDIO_EXTRACTED
+  TIMELINE_SEGMENTED
+  NARRATIVE_ANALYZED
+  VISUAL_ANALYZED
+  AUDIO_ANALYZED
+  READY_FOR_VIRAL_DNA
   COMPLETED
   FAILED
+}
+
+enum TimelineSegmentType {
+  HOOK
+  SETUP
+  CONTEXT
+  PROBLEM
+  OPEN_LOOP
+  ESCALATION
+  EVIDENCE
+  STORY_DEVELOPMENT
+  TRANSITION
+  PATTERN_INTERRUPT
+  REVEAL
+  PAYOFF
+  SUMMARY
+  CTA
+  OUTRO
+}
+
+enum HookType {
+  UNEXPECTED_FACT
+  QUESTION
+  CONTRARIAN
+  MYSTERY
+  STORY_OPENING
+  AUTHORITY
+  PROBLEM_FIRST
+  FUTURE_PROMISE
+  EMOTIONAL
+}
+
+enum NarrativePattern {
+  DOCUMENTARY
+  MYSTERY_REVEAL
+  CHRONOLOGICAL
+  EDUCATIONAL
+  TRANSFORMATION
+  INVESTIGATION
+  CONFLICT
+  BIOGRAPHY
+  TIMELINE
+}
+
+enum VisualSceneCategory {
+  ARCHIVAL_PHOTO
+  PORTRAIT
+  LANDSCAPE
+  MAP
+  DOCUMENT
+  CHART
+  SCREENSHOT
+  ILLUSTRATION
+  GENERATED_IMAGE
+  TEXT_CARD
+  UNKNOWN
+}
+
+enum VisualSceneMotion {
+  SLOW_ZOOM
+  ZOOM_OUT
+  PAN
+  STATIC
+  CROP
+  UNKNOWN
 }
 
 enum JobStatus {
@@ -177,24 +251,24 @@ model Profile {
 // ---------------------------------------------------------------------------
 
 model Project {
-  id     String        @id @default(uuid()) @db.Uuid
-  owner  Profile       @relation(fields: [ownerId], references: [id])
-  ownerId String       @db.Uuid
-  title  String
-  type   ProjectType
-  status ProjectStatus @default(ACTIVE)
+  id      String        @id @default(uuid()) @db.Uuid
+  owner   Profile       @relation(fields: [ownerId], references: [id])
+  ownerId String        @db.Uuid
+  title   String
+  type    ProjectType
+  status  ProjectStatus @default(ACTIVE)
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  videos               Video[]
-  channels             Channel[]
-  channelAnalyses      ChannelAnalysis[]
+  videos                Video[]
+  channels              Channel[]
+  channelAnalyses       ChannelAnalysis[]
   contentBuilderOutputs ContentBuilderOutput[]
-  knowledgeBaseEntries KnowledgeBaseEntry[]
-  apiUsageLogs         ApiUsageLog[]
-  storageAssets        StorageAsset[]
+  knowledgeBaseEntries  KnowledgeBaseEntry[]
+  apiUsageLogs          ApiUsageLog[]
+  storageAssets         StorageAsset[]
 
   @@index([ownerId])
   @@index([status])
@@ -212,10 +286,10 @@ model Video {
   status      VideoStatus     @default(QUEUED)
 
   // Reverse Engineering Engine: channel-imported video metadata (all optional — unused by Study Engine)
-  channel        Channel?      @relation(fields: [channelId], references: [id])
-  channelId      String?       @db.Uuid
-  playlist       Playlist?     @relation(fields: [playlistId], references: [id])
-  playlistId     String?       @db.Uuid
+  channel        Channel?  @relation(fields: [channelId], references: [id])
+  channelId      String?   @db.Uuid
+  playlist       Playlist? @relation(fields: [playlistId], references: [id])
+  playlistId     String?   @db.Uuid
   youtubeVideoId String?
   thumbnailUrl   String?
   publishedAt    DateTime?
@@ -250,6 +324,13 @@ model Video {
   storageAssets   StorageAsset[]
   apiUsageLogs    ApiUsageLog[]
 
+  videoAnalysis     VideoAnalysis?
+  videoTranscript   VideoTranscript?
+  timelineSegments  TimelineSegment[]
+  narrativeAnalysis NarrativeAnalysis?
+  visualScenes      VisualScene[]
+  audioMetric       AudioMetric?
+
   @@index([projectId])
   @@index([status])
   @@index([channelId])
@@ -263,9 +344,9 @@ model Video {
 // ---------------------------------------------------------------------------
 
 model Channel {
-  id     String  @id @default(uuid()) @db.Uuid
-  project Project @relation(fields: [projectId], references: [id])
-  projectId String @db.Uuid
+  id        String  @id @default(uuid()) @db.Uuid
+  project   Project @relation(fields: [projectId], references: [id])
+  projectId String  @db.Uuid
 
   sourceUrl        String
   youtubeChannelId String?
@@ -293,9 +374,9 @@ model Channel {
 }
 
 model Playlist {
-  id      String  @id @default(uuid()) @db.Uuid
-  channel Channel @relation(fields: [channelId], references: [id])
-  channelId String @db.Uuid
+  id        String  @id @default(uuid()) @db.Uuid
+  channel   Channel @relation(fields: [channelId], references: [id])
+  channelId String  @db.Uuid
 
   youtubePlaylistId String
   title             String?
@@ -317,19 +398,19 @@ model Playlist {
 // ---------------------------------------------------------------------------
 
 model ProcessingJob {
-  id        String    @id @default(uuid()) @db.Uuid
-  pipeline  JobPipeline @default(STUDY)
-  video     Video?    @relation(fields: [videoId], references: [id])
-  videoId   String?   @db.Uuid
-  channel   Channel?  @relation(fields: [channelId], references: [id])
-  channelId String?   @db.Uuid
-  stage     JobStage  @default(QUEUED)
-  status    JobStatus @default(PENDING)
-  attempts  Int       @default(0)
-  maxAttempts Int     @default(3)
-  lastError String?
-  retriedBy   Profile? @relation("JobRetriedBy", fields: [retriedById], references: [id])
-  retriedById String?  @db.Uuid
+  id          String      @id @default(uuid()) @db.Uuid
+  pipeline    JobPipeline @default(STUDY)
+  video       Video?      @relation(fields: [videoId], references: [id])
+  videoId     String?     @db.Uuid
+  channel     Channel?    @relation(fields: [channelId], references: [id])
+  channelId   String?     @db.Uuid
+  stage       JobStage    @default(QUEUED)
+  status      JobStatus   @default(PENDING)
+  attempts    Int         @default(0)
+  maxAttempts Int         @default(3)
+  lastError   String?
+  retriedBy   Profile?    @relation("JobRetriedBy", fields: [retriedById], references: [id])
+  retriedById String?     @db.Uuid
 
   startedAt   DateTime?
   completedAt DateTime?
@@ -347,11 +428,11 @@ model ProcessingJob {
 // ---------------------------------------------------------------------------
 
 model Transcript {
-  id        String   @id @default(uuid()) @db.Uuid
-  video     Video    @relation(fields: [videoId], references: [id])
-  videoId   String   @db.Uuid @unique
-  language  Language @default(EN)
-  content   String
+  id          String   @id @default(uuid()) @db.Uuid
+  video       Video    @relation(fields: [videoId], references: [id])
+  videoId     String   @unique @db.Uuid
+  language    Language @default(EN)
+  content     String
   storagePath String?
 
   createdAt DateTime @default(now())
@@ -363,7 +444,7 @@ model Transcript {
 model Translation {
   id          String   @id @default(uuid()) @db.Uuid
   video       Video    @relation(fields: [videoId], references: [id])
-  videoId     String   @db.Uuid @unique
+  videoId     String   @unique @db.Uuid
   language    Language @default(PT)
   content     String
   storagePath String?
@@ -375,9 +456,9 @@ model Translation {
 }
 
 model NarrationAsset {
-  id          String  @id @default(uuid()) @db.Uuid
-  video       Video   @relation(fields: [videoId], references: [id])
-  videoId     String  @db.Uuid @unique
+  id          String   @id @default(uuid()) @db.Uuid
+  video       Video    @relation(fields: [videoId], references: [id])
+  videoId     String   @unique @db.Uuid
   voiceId     String
   language    Language @default(PT)
   script      String
@@ -391,12 +472,12 @@ model NarrationAsset {
 }
 
 model SlideDeck {
-  id           String @id @default(uuid()) @db.Uuid
-  video        Video  @relation(fields: [videoId], references: [id])
-  videoId      String @db.Uuid @unique
-  slideCount   Int
-  pptxPath     String
-  pdfPath      String?
+  id         String  @id @default(uuid()) @db.Uuid
+  video      Video   @relation(fields: [videoId], references: [id])
+  videoId    String  @unique @db.Uuid
+  slideCount Int
+  pptxPath   String
+  pdfPath    String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -407,7 +488,7 @@ model SlideDeck {
 model StudyVideoAsset {
   id          String @id @default(uuid()) @db.Uuid
   video       Video  @relation(fields: [videoId], references: [id])
-  videoId     String @db.Uuid @unique
+  videoId     String @unique @db.Uuid
   storagePath String
   durationSec Int?
 
@@ -420,7 +501,7 @@ model StudyVideoAsset {
 model Glossary {
   id      String @id @default(uuid()) @db.Uuid
   video   Video  @relation(fields: [videoId], references: [id])
-  videoId String @db.Uuid @unique
+  videoId String @unique @db.Uuid
   terms   Json
 
   createdAt DateTime @default(now())
@@ -432,7 +513,7 @@ model Glossary {
 model Quiz {
   id      String @id @default(uuid()) @db.Uuid
   video   Video  @relation(fields: [videoId], references: [id])
-  videoId String @db.Uuid @unique
+  videoId String @unique @db.Uuid
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -443,14 +524,14 @@ model Quiz {
 }
 
 model QuizQuestion {
-  id            String   @id @default(uuid()) @db.Uuid
-  quiz          Quiz     @relation(fields: [quizId], references: [id])
-  quizId        String   @db.Uuid
+  id            String  @id @default(uuid()) @db.Uuid
+  quiz          Quiz    @relation(fields: [quizId], references: [id])
+  quizId        String  @db.Uuid
   question      String
   options       Json
   correctOption Int
   explanation   String?
-  order         Int      @default(0)
+  order         Int     @default(0)
 
   createdAt DateTime @default(now())
 
@@ -459,12 +540,12 @@ model QuizQuestion {
 }
 
 model Flashcard {
-  id      String  @id @default(uuid()) @db.Uuid
-  video   Video   @relation(fields: [videoId], references: [id])
-  videoId String  @db.Uuid
+  id      String @id @default(uuid()) @db.Uuid
+  video   Video  @relation(fields: [videoId], references: [id])
+  videoId String @db.Uuid
   front   String
   back    String
-  order   Int     @default(0)
+  order   Int    @default(0)
 
   createdAt DateTime @default(now())
 
@@ -477,16 +558,16 @@ model Flashcard {
 // ---------------------------------------------------------------------------
 
 model ChannelAnalysis {
-  id      String @id @default(uuid()) @db.Uuid
-  project Project @relation(fields: [projectId], references: [id])
-  projectId String @db.Uuid
-  video   Video?  @relation(fields: [videoId], references: [id])
-  videoId String? @db.Uuid @unique
+  id        String  @id @default(uuid()) @db.Uuid
+  project   Project @relation(fields: [projectId], references: [id])
+  projectId String  @db.Uuid
+  video     Video?  @relation(fields: [videoId], references: [id])
+  videoId   String? @unique @db.Uuid
 
   sourceUrl String
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
   viralDnaProfile ViralDnaProfile?
@@ -498,7 +579,7 @@ model ChannelAnalysis {
 model ViralDnaProfile {
   id                String          @id @default(uuid()) @db.Uuid
   channelAnalysis   ChannelAnalysis @relation(fields: [channelAnalysisId], references: [id])
-  channelAnalysisId String          @db.Uuid @unique
+  channelAnalysisId String          @unique @db.Uuid
 
   hookDurationSec     Float?
   avgSceneDurationSec Float?
@@ -514,6 +595,172 @@ model ViralDnaProfile {
   updatedAt DateTime @updatedAt
 
   @@map("viral_dna_profiles")
+}
+
+// ---------------------------------------------------------------------------
+// Video Reverse Engineering Engine (Phase 2): per-video analysis
+// ---------------------------------------------------------------------------
+
+/// Module 1 (download) + overall progress marker for the analysis pipeline.
+/// Errors/attempts/timestamps live on ProcessingJob (reused) — not duplicated here.
+model VideoAnalysis {
+  id      String @id @default(uuid()) @db.Uuid
+  video   Video  @relation(fields: [videoId], references: [id])
+  videoId String @unique @db.Uuid
+
+  videoStoragePath     String?
+  audioStoragePath     String?
+  thumbnailStoragePath String?
+  subtitlesStoragePath String?
+  fileSizeBytes        Int?
+  downloadDurationMs   Int?
+  downloadFormat       String?
+  audioDurationMs      Int?
+
+  readyForViralDnaAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("video_analyses")
+}
+
+/// Module 2: transcription.
+model VideoTranscript {
+  id      String @id @default(uuid()) @db.Uuid
+  video   Video  @relation(fields: [videoId], references: [id])
+  videoId String @unique @db.Uuid
+
+  rawText          String
+  reviewedText     String?
+  language         String?
+  model            String?
+  inputTokens      Int?
+  outputTokens     Int?
+  audioMinutes     Float?
+  estimatedCostUsd Float?
+  wordsPerMinute   Float?
+  confidence       Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  segments TranscriptSegment[]
+
+  @@map("video_transcripts")
+}
+
+model TranscriptSegment {
+  id           String          @id @default(uuid()) @db.Uuid
+  transcript   VideoTranscript @relation(fields: [transcriptId], references: [id])
+  transcriptId String          @db.Uuid
+  index        Int
+  startSec     Float
+  endSec       Float
+  text         String
+  confidence   Float?
+
+  @@index([transcriptId])
+  @@map("transcript_segments")
+}
+
+/// Module 3: timeline segmentation into narrative blocks. User-editable.
+model TimelineSegment {
+  id          String              @id @default(uuid()) @db.Uuid
+  video       Video               @relation(fields: [videoId], references: [id])
+  videoId     String              @db.Uuid
+  index       Int
+  type        TimelineSegmentType
+  startSec    Float
+  endSec      Float
+  durationSec Float
+  text        String
+  purpose     String?
+  emotion     String?
+  intensity   Float?
+  confidence  Float?
+  evidence    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([videoId])
+  @@map("timeline_segments")
+}
+
+/// Module 4: narrative analysis conclusions, each backed by evidence text.
+model NarrativeAnalysis {
+  id      String @id @default(uuid()) @db.Uuid
+  video   Video  @relation(fields: [videoId], references: [id])
+  videoId String @unique @db.Uuid
+
+  hookType            HookType?
+  hookDurationSec     Float?
+  promise             String?
+  openLoopCount       Int?
+  payoffCount         Int?
+  revealFrequency     Float?
+  storyStructure      String?
+  informationDensity  Float?
+  curiosityScore      Float?
+  narrativeStyle      String?
+  narrativePattern    NarrativePattern?
+  retentionMechanisms String?
+  evidence            String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("narrative_analyses")
+}
+
+/// Module 5: visual analysis — one row per detected scene.
+model VisualScene {
+  id               String              @id @default(uuid()) @db.Uuid
+  video            Video               @relation(fields: [videoId], references: [id])
+  videoId          String              @db.Uuid
+  index            Int
+  startSec         Float
+  endSec           Float
+  durationSec      Float
+  frameStoragePath String?
+  category         VisualSceneCategory
+  motion           VisualSceneMotion
+  transition       String?
+  sceneScore       Float?
+  description      String?
+  confidence       Float?
+
+  createdAt DateTime @default(now())
+
+  @@index([videoId])
+  @@map("visual_scenes")
+}
+
+/// Module 6: deterministic audio metrics (no AI). energyCurve is the one
+/// justified time-series JSON field — modeling per-sample rows would be
+/// impractical for what's purely chart-rendering data.
+model AudioMetric {
+  id      String @id @default(uuid()) @db.Uuid
+  video   Video  @relation(fields: [videoId], references: [id])
+  videoId String @unique @db.Uuid
+
+  wordsPerMinute      Float?
+  averagePaceWpm      Float?
+  medianPaceWpm       Float?
+  pauseCount          Int?
+  avgPauseDurationSec Float?
+  speechDensity       Float?
+  energyCurve         Json?
+  volumeVariation     Float?
+  silenceRatio        Float?
+  narrationSpeed      Float?
+  sceneSyncScore      Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("audio_metrics")
 }
 
 // ---------------------------------------------------------------------------
@@ -542,14 +789,14 @@ model ContentBuilderOutput {
 // ---------------------------------------------------------------------------
 
 model KnowledgeBaseEntry {
-  id        String   @id @default(uuid()) @db.Uuid
-  project   Project  @relation(fields: [projectId], references: [id])
-  projectId String   @db.Uuid
+  id        String  @id @default(uuid()) @db.Uuid
+  project   Project @relation(fields: [projectId], references: [id])
+  projectId String  @db.Uuid
   title     String
   entryType String
   summary   String?
   refTable  String
-  refId     String   @db.Uuid
+  refId     String  @db.Uuid
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -564,17 +811,17 @@ model KnowledgeBaseEntry {
 // ---------------------------------------------------------------------------
 
 model ApiUsageLog {
-  id        String      @id @default(uuid()) @db.Uuid
-  profile   Profile     @relation(fields: [profileId], references: [id])
-  profileId String      @db.Uuid
-  project   Project?    @relation(fields: [projectId], references: [id])
-  projectId String?     @db.Uuid
-  video     Video?      @relation(fields: [videoId], references: [id])
-  videoId   String?     @db.Uuid
+  id        String   @id @default(uuid()) @db.Uuid
+  profile   Profile  @relation(fields: [profileId], references: [id])
+  profileId String   @db.Uuid
+  project   Project? @relation(fields: [projectId], references: [id])
+  projectId String?  @db.Uuid
+  video     Video?   @relation(fields: [videoId], references: [id])
+  videoId   String?  @db.Uuid
 
-  provider        ApiProvider
-  unit            String
-  quantity        Float
+  provider         ApiProvider
+  unit             String
+  quantity         Float
   estimatedCostUsd Float
 
   createdAt DateTime @default(now())
@@ -586,14 +833,14 @@ model ApiUsageLog {
 }
 
 model AuditLog {
-  id        String   @id @default(uuid()) @db.Uuid
-  actor     Profile? @relation(fields: [actorId], references: [id])
-  actorId   String?  @db.Uuid
-  action    String
-  entity    String
-  entityId  String?  @db.Uuid
-  before    Json?
-  after     Json?
+  id       String   @id @default(uuid()) @db.Uuid
+  actor    Profile? @relation(fields: [actorId], references: [id])
+  actorId  String?  @db.Uuid
+  action   String
+  entity   String
+  entityId String?  @db.Uuid
+  before   Json?
+  after    Json?
 
   createdAt DateTime @default(now())
 
@@ -603,11 +850,11 @@ model AuditLog {
 }
 
 model StorageAsset {
-  id        String        @id @default(uuid()) @db.Uuid
-  project   Project?      @relation(fields: [projectId], references: [id])
-  projectId String?       @db.Uuid
-  video     Video?        @relation(fields: [videoId], references: [id])
-  videoId   String?       @db.Uuid
+  id        String   @id @default(uuid()) @db.Uuid
+  project   Project? @relation(fields: [projectId], references: [id])
+  projectId String?  @db.Uuid
+  video     Video?   @relation(fields: [videoId], references: [id])
+  videoId   String?  @db.Uuid
 
   bucket    StorageBucket
   path      String

@@ -69,6 +69,13 @@ alter table public.quiz_questions enable row level security;
 alter table public.flashcards enable row level security;
 alter table public.channels enable row level security;
 alter table public.playlists enable row level security;
+alter table public.video_analyses enable row level security;
+alter table public.video_transcripts enable row level security;
+alter table public.transcript_segments enable row level security;
+alter table public.timeline_segments enable row level security;
+alter table public.narrative_analyses enable row level security;
+alter table public.visual_scenes enable row level security;
+alter table public.audio_metrics enable row level security;
 alter table public.channel_analyses enable row level security;
 alter table public.viral_dna_profiles enable row level security;
 alter table public.content_builder_outputs enable row level security;
@@ -283,6 +290,98 @@ create policy "playlists_all" on public.playlists
   with check (exists (
     select 1 from public.channels c join public.projects p on p.id = c."projectId"
     where c.id = playlists."channelId" and (p."ownerId" = auth.uid() or public.is_admin())
+  ));
+
+-- ---------------------------------------------------------------------------
+-- Video Reverse Engineering Engine (Phase 2) — all scoped via videos.project
+-- ---------------------------------------------------------------------------
+
+drop policy if exists "video_analyses_all" on public.video_analyses;
+create policy "video_analyses_all" on public.video_analyses
+  for all
+  using (exists (
+    select 1 from public.videos v join public.projects p on p.id = v."projectId"
+    where v.id = video_analyses."videoId" and (p."ownerId" = auth.uid() or public.is_admin())
+  ))
+  with check (exists (
+    select 1 from public.videos v join public.projects p on p.id = v."projectId"
+    where v.id = video_analyses."videoId" and (p."ownerId" = auth.uid() or public.is_admin())
+  ));
+
+drop policy if exists "video_transcripts_all" on public.video_transcripts;
+create policy "video_transcripts_all" on public.video_transcripts
+  for all
+  using (exists (
+    select 1 from public.videos v join public.projects p on p.id = v."projectId"
+    where v.id = video_transcripts."videoId" and (p."ownerId" = auth.uid() or public.is_admin())
+  ))
+  with check (exists (
+    select 1 from public.videos v join public.projects p on p.id = v."projectId"
+    where v.id = video_transcripts."videoId" and (p."ownerId" = auth.uid() or public.is_admin())
+  ));
+
+drop policy if exists "transcript_segments_all" on public.transcript_segments;
+create policy "transcript_segments_all" on public.transcript_segments
+  for all
+  using (exists (
+    select 1 from public.video_transcripts t
+    join public.videos v on v.id = t."videoId"
+    join public.projects p on p.id = v."projectId"
+    where t.id = transcript_segments."transcriptId" and (p."ownerId" = auth.uid() or public.is_admin())
+  ))
+  with check (exists (
+    select 1 from public.video_transcripts t
+    join public.videos v on v.id = t."videoId"
+    join public.projects p on p.id = v."projectId"
+    where t.id = transcript_segments."transcriptId" and (p."ownerId" = auth.uid() or public.is_admin())
+  ));
+
+drop policy if exists "timeline_segments_all" on public.timeline_segments;
+create policy "timeline_segments_all" on public.timeline_segments
+  for all
+  using (exists (
+    select 1 from public.videos v join public.projects p on p.id = v."projectId"
+    where v.id = timeline_segments."videoId" and (p."ownerId" = auth.uid() or public.is_admin())
+  ))
+  with check (exists (
+    select 1 from public.videos v join public.projects p on p.id = v."projectId"
+    where v.id = timeline_segments."videoId" and (p."ownerId" = auth.uid() or public.is_admin())
+  ));
+
+drop policy if exists "narrative_analyses_all" on public.narrative_analyses;
+create policy "narrative_analyses_all" on public.narrative_analyses
+  for all
+  using (exists (
+    select 1 from public.videos v join public.projects p on p.id = v."projectId"
+    where v.id = narrative_analyses."videoId" and (p."ownerId" = auth.uid() or public.is_admin())
+  ))
+  with check (exists (
+    select 1 from public.videos v join public.projects p on p.id = v."projectId"
+    where v.id = narrative_analyses."videoId" and (p."ownerId" = auth.uid() or public.is_admin())
+  ));
+
+drop policy if exists "visual_scenes_all" on public.visual_scenes;
+create policy "visual_scenes_all" on public.visual_scenes
+  for all
+  using (exists (
+    select 1 from public.videos v join public.projects p on p.id = v."projectId"
+    where v.id = visual_scenes."videoId" and (p."ownerId" = auth.uid() or public.is_admin())
+  ))
+  with check (exists (
+    select 1 from public.videos v join public.projects p on p.id = v."projectId"
+    where v.id = visual_scenes."videoId" and (p."ownerId" = auth.uid() or public.is_admin())
+  ));
+
+drop policy if exists "audio_metrics_all" on public.audio_metrics;
+create policy "audio_metrics_all" on public.audio_metrics
+  for all
+  using (exists (
+    select 1 from public.videos v join public.projects p on p.id = v."projectId"
+    where v.id = audio_metrics."videoId" and (p."ownerId" = auth.uid() or public.is_admin())
+  ))
+  with check (exists (
+    select 1 from public.videos v join public.projects p on p.id = v."projectId"
+    where v.id = audio_metrics."videoId" and (p."ownerId" = auth.uid() or public.is_admin())
   ));
 
 drop policy if exists "channel_analyses_all" on public.channel_analyses;

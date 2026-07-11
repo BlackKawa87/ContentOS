@@ -3,6 +3,8 @@ import { nextStage } from '../studyPipeline/stages.js'
 import { stageRegistry } from '../studyPipeline/registry.js'
 import { nextChannelStage } from '../reverseEnginePipeline/stages.js'
 import { channelStageRegistry } from '../reverseEnginePipeline/registry.js'
+import { nextVideoAnalysisStage } from '../videoAnalysisPipeline/stages.js'
+import { videoAnalysisStageRegistry } from '../videoAnalysisPipeline/registry.js'
 
 const MAX_ATTEMPTS = 3
 
@@ -14,10 +16,10 @@ export interface AdvanceResult {
 }
 
 /** Advances a single ProcessingJob by exactly one stage. Never chains stages.
- * Dispatches on `job.pipeline`: STUDY jobs use the Study Engine's video-scoped
- * stages/registry exactly as before; REVERSE_CHANNEL_IMPORT jobs use the
- * channel-scoped equivalent. The retry/attempts/audit-log mechanics below are
- * shared by both pipelines. */
+ * Dispatches on `job.pipeline`: STUDY and VIDEO_ANALYSIS jobs are video-scoped
+ * (each has its own stages/registry — never shared, per the "never share
+ * business logic" rule); REVERSE_CHANNEL_IMPORT jobs are channel-scoped. The
+ * retry/attempts/audit-log mechanics below are shared by all three pipelines. */
 export async function advanceJob(jobId: string): Promise<AdvanceResult> {
   const job = await prisma.processingJob.findUniqueOrThrow({
     where: { id: jobId },
@@ -25,7 +27,13 @@ export async function advanceJob(jobId: string): Promise<AdvanceResult> {
   })
 
   const isChannelPipeline = job.pipeline === 'REVERSE_CHANNEL_IMPORT'
-  const targetStage = isChannelPipeline ? nextChannelStage(job.stage) : nextStage(job.stage)
+  const isVideoAnalysisPipeline = job.pipeline === 'VIDEO_ANALYSIS'
+  const pipelineNextStage = isChannelPipeline
+    ? nextChannelStage
+    : isVideoAnalysisPipeline
+      ? nextVideoAnalysisStage
+      : nextStage
+  const targetStage = pipelineNextStage(job.stage)
 
   if (!targetStage) {
     await prisma.processingJob.update({
@@ -35,12 +43,20 @@ export async function advanceJob(jobId: string): Promise<AdvanceResult> {
     return { jobId, stage: job.stage, outcome: 'succeeded' }
   }
 
+  // A pipeline's own STAGE_ORDER (not the hardcoded 'COMPLETED' string) decides terminality,
+  // since VIDEO_ANALYSIS deliberately ends at READY_FOR_VIRAL_DNA rather than 'COMPLETED'.
+  const isFinalStage = pipelineNextStage(targetStage) === null
+
   await prisma.processingJob.update({
     where: { id: job.id },
     data: { status: 'RUNNING', startedAt: job.startedAt ?? new Date() },
   })
 
-  const handler = isChannelPipeline ? channelStageRegistry[targetStage] : stageRegistry[targetStage]
+  const handler = isChannelPipeline
+    ? channelStageRegistry[targetStage]
+    : isVideoAnalysisPipeline
+      ? videoAnalysisStageRegistry[targetStage]
+      : stageRegistry[targetStage]
   if (!handler) {
     throw new Error(`No handler registered for stage ${targetStage}`)
   }
@@ -49,6 +65,9 @@ export async function advanceJob(jobId: string): Promise<AdvanceResult> {
     if (isChannelPipeline) {
       if (!job.channel) throw new Error(`ProcessingJob ${job.id} has no channel`)
       await channelStageRegistry[targetStage]!(job.channel)
+    } else if (isVideoAnalysisPipeline) {
+      if (!job.video) throw new Error(`ProcessingJob ${job.id} has no video`)
+      await videoAnalysisStageRegistry[targetStage]!(job.video)
     } else {
       if (!job.video) throw new Error(`ProcessingJob ${job.id} has no video`)
       await stageRegistry[targetStage]!(job.video)
@@ -57,11 +76,11 @@ export async function advanceJob(jobId: string): Promise<AdvanceResult> {
     const entityUpdate = isChannelPipeline
       ? prisma.channel.update({
           where: { id: job.channelId! },
-          data: { status: targetStage === 'COMPLETED' ? 'READY' : 'IMPORTING' },
+          data: { status: isFinalStage ? 'READY' : 'IMPORTING' },
         })
       : prisma.video.update({
           where: { id: job.videoId! },
-          data: { status: targetStage === 'COMPLETED' ? 'COMPLETED' : 'PROCESSING' },
+          data: { status: isFinalStage ? 'COMPLETED' : 'PROCESSING' },
         })
 
     await prisma.$transaction([
@@ -80,7 +99,7 @@ export async function advanceJob(jobId: string): Promise<AdvanceResult> {
       }),
     ])
 
-    if (targetStage !== 'COMPLETED') {
+    if (!isFinalStage) {
       await prisma.processingJob.create({
         data: {
           pipeline: job.pipeline,

@@ -95,3 +95,137 @@ export async function composeStudyVideo(
   await unlink(outPath).catch(() => {})
   return buffer
 }
+
+// ---------------------------------------------------------------------------
+// Video Reverse Engineering Engine: deterministic visual/audio detection
+// ---------------------------------------------------------------------------
+
+/** Detects hard scene cuts via ffmpeg's scene-change filter. Returns cut timestamps (seconds). */
+export async function detectSceneCuts(videoBuffer: Buffer, threshold = 0.3): Promise<number[]> {
+  const inPath = path.join(tmpdir(), `${randomUUID()}.mp4`)
+  await writeFile(inPath, videoBuffer)
+
+  const cuts: number[] = []
+  try {
+    await new Promise<void>((resolve, reject) => {
+      ffmpeg(inPath)
+        .videoFilters(`select='gt(scene,${threshold})',showinfo`)
+        .outputOptions(['-f', 'null'])
+        .output('/dev/null')
+        .on('stderr', (line: string) => {
+          const match = line.match(/pts_time:([\d.]+)/)
+          if (match) cuts.push(Number(match[1]))
+        })
+        .on('end', () => resolve())
+        .on('error', reject)
+        .run()
+    })
+  } finally {
+    await unlink(inPath).catch(() => {})
+  }
+  return cuts
+}
+
+/** Extracts a single JPEG frame at the given timestamp — the "representative frame" for a scene. */
+export async function extractFrame(videoBuffer: Buffer, atSec: number): Promise<Buffer> {
+  const inPath = path.join(tmpdir(), `${randomUUID()}.mp4`)
+  const outPath = path.join(tmpdir(), `${randomUUID()}.jpg`)
+  await writeFile(inPath, videoBuffer)
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      ffmpeg(inPath)
+        .seekInput(Math.max(0, atSec))
+        .frames(1)
+        .output(outPath)
+        .on('end', () => resolve())
+        .on('error', reject)
+        .run()
+    })
+    return await readFile(outPath)
+  } finally {
+    await Promise.all([unlink(inPath).catch(() => {}), unlink(outPath).catch(() => {})])
+  }
+}
+
+export interface SilenceInterval {
+  startSec: number
+  endSec: number
+}
+
+/** Detects silent stretches (pauses) via ffmpeg's silencedetect filter. */
+export async function detectSilences(
+  audioBuffer: Buffer,
+  noiseFloorDb = -30,
+  minDurationSec = 0.3,
+): Promise<SilenceInterval[]> {
+  const inPath = path.join(tmpdir(), `${randomUUID()}.mp3`)
+  await writeFile(inPath, audioBuffer)
+
+  const intervals: SilenceInterval[] = []
+  let pendingStart: number | null = null
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      ffmpeg(inPath)
+        .audioFilters(`silencedetect=noise=${noiseFloorDb}dB:d=${minDurationSec}`)
+        .outputOptions(['-f', 'null'])
+        .output('/dev/null')
+        .on('stderr', (line: string) => {
+          const startMatch = line.match(/silence_start:\s*([\d.]+)/)
+          const endMatch = line.match(/silence_end:\s*([\d.]+)/)
+          if (startMatch) pendingStart = Number(startMatch[1])
+          if (endMatch && pendingStart !== null) {
+            intervals.push({ startSec: pendingStart, endSec: Number(endMatch[1]) })
+            pendingStart = null
+          }
+        })
+        .on('end', () => resolve())
+        .on('error', reject)
+        .run()
+    })
+  } finally {
+    await unlink(inPath).catch(() => {})
+  }
+  return intervals
+}
+
+export interface EnergyPoint {
+  t: number
+  meanVolumeDb: number
+}
+
+/** Splits the track into equal windows and measures mean volume per window — a coarse energy curve. */
+export async function getEnergyCurve(audioBuffer: Buffer, windows = 24): Promise<EnergyPoint[]> {
+  const durationSec = await getMediaDurationSec(audioBuffer, 'mp3')
+  const windowSec = durationSec / windows
+  const inPath = path.join(tmpdir(), `${randomUUID()}.mp3`)
+  await writeFile(inPath, audioBuffer)
+
+  const points: EnergyPoint[] = []
+  try {
+    for (let i = 0; i < windows; i++) {
+      const start = i * windowSec
+      let meanVolumeDb = -91
+      await new Promise<void>((resolve, reject) => {
+        ffmpeg(inPath)
+          .seekInput(start)
+          .duration(windowSec)
+          .audioFilters('volumedetect')
+          .outputOptions(['-f', 'null'])
+          .output('/dev/null')
+          .on('stderr', (line: string) => {
+            const match = line.match(/mean_volume:\s*(-?[\d.]+)\s*dB/)
+            if (match) meanVolumeDb = Number(match[1])
+          })
+          .on('end', () => resolve())
+          .on('error', reject)
+          .run()
+      })
+      points.push({ t: start, meanVolumeDb })
+    }
+  } finally {
+    await unlink(inPath).catch(() => {})
+  }
+  return points
+}

@@ -5,6 +5,9 @@ import { nextChannelStage } from '../reverseEnginePipeline/stages.js'
 import { channelStageRegistry } from '../reverseEnginePipeline/registry.js'
 import { nextVideoAnalysisStage } from '../videoAnalysisPipeline/stages.js'
 import { videoAnalysisStageRegistry } from '../videoAnalysisPipeline/registry.js'
+import { nextViralDnaStage } from '../viralDnaPipeline/stages.js'
+import { viralDnaStageRegistry } from '../viralDnaPipeline/registry.js'
+import type { VideoStatus } from '../generated/prisma/enums.js'
 
 const MAX_ATTEMPTS = 3
 
@@ -15,11 +18,18 @@ export interface AdvanceResult {
   error?: string
 }
 
+/** Video-scoped pipelines each have their own terminal VideoStatus — VIDEO_ANALYSIS and STUDY
+ * both use the generic 'COMPLETED', but VIRAL_DNA has its own distinct terminal status since
+ * a video can complete both pipelines independently and the UI needs to tell them apart. */
+function videoTerminalStatus(pipeline: string): VideoStatus {
+  return pipeline === 'VIRAL_DNA' ? 'VIRAL_DNA_COMPLETED' : 'COMPLETED'
+}
+
 /** Advances a single ProcessingJob by exactly one stage. Never chains stages.
- * Dispatches on `job.pipeline`: STUDY and VIDEO_ANALYSIS jobs are video-scoped
- * (each has its own stages/registry — never shared, per the "never share
- * business logic" rule); REVERSE_CHANNEL_IMPORT jobs are channel-scoped. The
- * retry/attempts/audit-log mechanics below are shared by all three pipelines. */
+ * Dispatches on `job.pipeline`: STUDY, VIDEO_ANALYSIS, and VIRAL_DNA jobs are video-scoped
+ * (each has its own stages/registry — never shared, per the "never share business logic"
+ * rule); REVERSE_CHANNEL_IMPORT jobs are channel-scoped. The retry/attempts/audit-log
+ * mechanics below are shared by all four pipelines. */
 export async function advanceJob(jobId: string): Promise<AdvanceResult> {
   const job = await prisma.processingJob.findUniqueOrThrow({
     where: { id: jobId },
@@ -28,11 +38,14 @@ export async function advanceJob(jobId: string): Promise<AdvanceResult> {
 
   const isChannelPipeline = job.pipeline === 'REVERSE_CHANNEL_IMPORT'
   const isVideoAnalysisPipeline = job.pipeline === 'VIDEO_ANALYSIS'
+  const isViralDnaPipeline = job.pipeline === 'VIRAL_DNA'
   const pipelineNextStage = isChannelPipeline
     ? nextChannelStage
     : isVideoAnalysisPipeline
       ? nextVideoAnalysisStage
-      : nextStage
+      : isViralDnaPipeline
+        ? nextViralDnaStage
+        : nextStage
   const targetStage = pipelineNextStage(job.stage)
 
   if (!targetStage) {
@@ -56,7 +69,9 @@ export async function advanceJob(jobId: string): Promise<AdvanceResult> {
     ? channelStageRegistry[targetStage]
     : isVideoAnalysisPipeline
       ? videoAnalysisStageRegistry[targetStage]
-      : stageRegistry[targetStage]
+      : isViralDnaPipeline
+        ? viralDnaStageRegistry[targetStage]
+        : stageRegistry[targetStage]
   if (!handler) {
     throw new Error(`No handler registered for stage ${targetStage}`)
   }
@@ -68,6 +83,9 @@ export async function advanceJob(jobId: string): Promise<AdvanceResult> {
     } else if (isVideoAnalysisPipeline) {
       if (!job.video) throw new Error(`ProcessingJob ${job.id} has no video`)
       await videoAnalysisStageRegistry[targetStage]!(job.video)
+    } else if (isViralDnaPipeline) {
+      if (!job.video) throw new Error(`ProcessingJob ${job.id} has no video`)
+      await viralDnaStageRegistry[targetStage]!(job.video)
     } else {
       if (!job.video) throw new Error(`ProcessingJob ${job.id} has no video`)
       await stageRegistry[targetStage]!(job.video)
@@ -80,7 +98,7 @@ export async function advanceJob(jobId: string): Promise<AdvanceResult> {
         })
       : prisma.video.update({
           where: { id: job.videoId! },
-          data: { status: isFinalStage ? 'COMPLETED' : 'PROCESSING' },
+          data: { status: isFinalStage ? videoTerminalStatus(job.pipeline) : 'PROCESSING' },
         })
 
     await prisma.$transaction([

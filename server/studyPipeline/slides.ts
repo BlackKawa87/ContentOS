@@ -1,4 +1,11 @@
-import * as PptxGenJSModule from 'pptxgenjs'
+// Import the CJS build directly rather than the bare 'pptxgenjs' specifier.
+// The package's "exports" map picks pptxgen.es.js under "type": "module", but
+// Vercel's Node builder loads that file through a CJS require() somewhere in
+// its bundling, which throws "Cannot use import statement outside a module"
+// in production (didn't reproduce locally). Forcing the CJS file sidesteps
+// the broken exports-conditional resolution entirely.
+// @ts-expect-error -- no type declarations for this deep CJS path; typed via 'pptxgenjs' below
+import * as PptxGenJSModule from 'pptxgenjs/dist/pptxgen.cjs.js'
 import type { VideoModel as Video } from '../generated/prisma/models.js'
 import { prisma } from '../lib/prisma.js'
 import { uploadAsset } from '../lib/storage.js'

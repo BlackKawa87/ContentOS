@@ -58,12 +58,14 @@ enum VideoStatus {
   PROCESSING
   COMPLETED
   FAILED
+  VIRAL_DNA_COMPLETED
 }
 
 enum JobPipeline {
   STUDY
   REVERSE_CHANNEL_IMPORT
   VIDEO_ANALYSIS
+  VIRAL_DNA
 }
 
 enum JobStage {
@@ -90,6 +92,19 @@ enum JobStage {
   VISUAL_ANALYZED
   AUDIO_ANALYZED
   READY_FOR_VIRAL_DNA
+  VIRAL_DNA_QUEUED
+  INPUTS_VALIDATED
+  METRICS_NORMALIZED
+  HOOK_PROFILE_GENERATED
+  NARRATIVE_PROFILE_GENERATED
+  RETENTION_PROFILE_GENERATED
+  VISUAL_PROFILE_GENERATED
+  AUDIO_PROFILE_GENERATED
+  EMOTION_PROFILE_GENERATED
+  PERFORMANCE_PROFILE_GENERATED
+  VIRAL_DNA_SYNTHESIZED
+  VIRAL_DNA_VALIDATED
+  VIRAL_DNA_COMPLETED
   COMPLETED
   FAILED
 }
@@ -122,6 +137,12 @@ enum HookType {
   PROBLEM_FIRST
   FUTURE_PROMISE
   EMOTIONAL
+  SHOCKING_STATEMENT
+  CURIOSITY_GAP
+  VISUAL_HOOK
+  RESULT_FIRST
+  WARNING
+  TRANSFORMATION_PROMISE
 }
 
 enum NarrativePattern {
@@ -134,6 +155,16 @@ enum NarrativePattern {
   CONFLICT
   BIOGRAPHY
   TIMELINE
+  PROBLEM_SOLUTION
+  LIST
+  ESCALATING_REVELATION
+  CONFLICT_RESOLUTION
+  BEFORE_AND_AFTER
+  CASE_STUDY
+  MYTH_VS_REALITY
+  QUESTION_AND_ANSWER
+  COUNTDOWN
+  CAUSE_AND_EFFECT
 }
 
 enum VisualSceneCategory {
@@ -157,6 +188,99 @@ enum VisualSceneMotion {
   STATIC
   CROP
   UNKNOWN
+}
+
+enum RetentionMechanismType {
+  OPEN_LOOP
+  DELAYED_PAYOFF
+  PATTERN_INTERRUPT
+  PROGRESSIVE_REVELATION
+  CURIOSITY_GAP
+  ESCALATION
+  CLIFFHANGER
+  QUESTION
+  SURPRISE
+  CONTRAST
+  EMOTIONAL_SHIFT
+  VISUAL_CHANGE
+  PACE_CHANGE
+  INFORMATION_GAP
+  STAKES_INCREASE
+  CALLBACK
+  FORESHADOWING
+  MICRO_PAYOFF
+  AUTHORITY_REINFORCEMENT
+  DIRECT_VIEWER_ADDRESS
+}
+
+enum ViralDnaScoreName {
+  HOOK_STRENGTH
+  CURIOSITY
+  NARRATIVE_CLARITY
+  NARRATIVE_MOMENTUM
+  RETENTION_MECHANISM_DENSITY
+  OPEN_LOOP_MANAGEMENT
+  PAYOFF_STRENGTH
+  INFORMATION_DENSITY
+  VISUAL_RHYTHM
+  VISUAL_VARIETY
+  VOICE_PACING
+  EMOTIONAL_PROGRESSION
+  CTA_INTEGRATION
+  STRUCTURAL_CONSISTENCY
+  EVIDENCE_CONFIDENCE
+  OVERALL_STRUCTURE
+  OVERALL_RETENTION
+  OVERALL_PRODUCTION_PATTERN
+  OVERALL_CONFIDENCE
+}
+
+enum HypothesisType {
+  HOOK
+  TOPIC
+  TITLE
+  THUMBNAIL
+  NARRATIVE
+  PACING
+  VISUAL
+  VOICE
+  DURATION
+  TIMING
+  AUDIENCE
+  FORMAT
+}
+
+enum HypothesisStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum EmotionalArcType {
+  RISING_TENSION
+  FALL_AND_RECOVERY
+  MYSTERY_TO_REVELATION
+  CONSTANT_ESCALATION
+  SHOCK_TO_EXPLANATION
+  PROBLEM_TO_RELIEF
+  STABLE_EDUCATIONAL
+  MULTIPLE_PEAKS
+  EMOTIONAL_TRANSFORMATION
+  UNKNOWN
+}
+
+enum EvidenceSourceType {
+  TRANSCRIPT
+  TIMELINE_SEGMENT
+  VISUAL_SCENE
+  AUDIO_METRIC
+  METRIC
+}
+
+enum ViralDnaProfileStatus {
+  DRAFT
+  VALIDATED
+  APPROVED
 }
 
 enum JobStatus {
@@ -237,10 +361,11 @@ model Profile {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  projects       Project[]
-  processingJobs ProcessingJob[] @relation("JobRetriedBy")
-  apiUsageLogs   ApiUsageLog[]
-  auditLogs      AuditLog[]
+  projects         Project[]
+  processingJobs   ProcessingJob[]   @relation("JobRetriedBy")
+  apiUsageLogs     ApiUsageLog[]
+  auditLogs        AuditLog[]
+  viralDnaProfiles ViralDnaProfile[]
 
   @@index([role])
   @@map("profiles")
@@ -330,6 +455,7 @@ model Video {
   narrativeAnalysis NarrativeAnalysis?
   visualScenes      VisualScene[]
   audioMetric       AudioMetric?
+  viralDnaProfiles  ViralDnaProfile[]
 
   @@index([projectId])
   @@index([status])
@@ -570,31 +696,8 @@ model ChannelAnalysis {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  viralDnaProfile ViralDnaProfile?
-
   @@index([projectId])
   @@map("channel_analyses")
-}
-
-model ViralDnaProfile {
-  id                String          @id @default(uuid()) @db.Uuid
-  channelAnalysis   ChannelAnalysis @relation(fields: [channelAnalysisId], references: [id])
-  channelAnalysisId String          @unique @db.Uuid
-
-  hookDurationSec     Float?
-  avgSceneDurationSec Float?
-  voiceSpeedWpm       Float?
-  imageCount          Int?
-  emotionalCurve      Json?
-  ctaStyle            String?
-  visualRhythm        Json?
-  narrativePattern    String?
-  retentionPattern    Json?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("viral_dna_profiles")
 }
 
 // ---------------------------------------------------------------------------
@@ -761,6 +864,149 @@ model AudioMetric {
   updatedAt DateTime @updatedAt
 
   @@map("audio_metrics")
+}
+
+// ---------------------------------------------------------------------------
+// Viral DNA Engine (Phase 3): synthesizes Phase 2's outputs into a versioned,
+// evidence-based profile per video. One ViralDnaProfile row per version —
+// `isCurrent` marks the active one; edits/regenerations create a new version
+// rather than mutating history (see server/viralDnaPipeline/).
+// ---------------------------------------------------------------------------
+
+model ViralDnaProfile {
+  id             String                @id @default(uuid()) @db.Uuid
+  video          Video                 @relation(fields: [videoId], references: [id])
+  videoId        String                @db.Uuid
+  profileVersion Int
+  isCurrent      Boolean               @default(true)
+  status         ViralDnaProfileStatus @default(DRAFT)
+  schemaVersion  String                @default("1.0.0")
+
+  generatedAt    DateTime @default(now())
+  sourceSnapshot Json? // Phase 2 tables' updatedAt values at generation time — stands in for source versioning since Phase 2 outputs aren't themselves versioned
+
+  // Flat, queryable columns for cross-video comparison (Module 19) — kept in
+  // sync with the equivalent nested JSON field below.
+  primaryHookType            HookType?
+  primaryNarrativePattern    NarrativePattern?
+  averageWordsPerMinute      Float?
+  averageSceneDurationSec    Float?
+  sceneChangesPerMinute      Float?
+  openLoopCount              Int?
+  revealFrequency            Float?
+  patternInterruptsPerMinute Float?
+  textOverlayRate            Float?
+  dominantMotion             VisualSceneMotion?
+  dominantTransition         String?
+  outlierScoreSnapshot       Float?
+  overallRetentionScore      Float?
+  overallConfidenceScore     Float?
+
+  // Deep nested profiles — see docs/viral-dna-schema.md for field-level shape.
+  hook               Json?
+  narrative          Json?
+  retention          Json?
+  visual             Json?
+  audio              Json?
+  emotion            Json?
+  informationDensity Json?
+  performance        Json?
+
+  warnings    Json? // string[]
+  limitations Json? // string[]
+  notes       String? // user-entered notes from the editing UI
+
+  createdBy   Profile? @relation(fields: [createdById], references: [id])
+  createdById String?  @db.Uuid
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  scores            ViralDnaScore[]
+  hypotheses        ViralDnaHypothesis[]
+  evidence          ViralDnaEvidence[]
+  validationResults ViralDnaValidationResult[]
+
+  @@unique([videoId, profileVersion])
+  @@index([videoId])
+  @@index([videoId, isCurrent])
+  @@map("viral_dna_profiles")
+}
+
+model ViralDnaScore {
+  id             String            @id @default(uuid()) @db.Uuid
+  profile        ViralDnaProfile   @relation(fields: [profileId], references: [id])
+  profileId      String            @db.Uuid
+  scoreName      ViralDnaScoreName
+  value          Float
+  formulaVersion String            @default("1.0.0")
+  inputs         Json?
+  evidence       String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([profileId, scoreName])
+  @@index([profileId])
+  @@map("viral_dna_scores")
+}
+
+model ViralDnaHypothesis {
+  id                    String           @id @default(uuid()) @db.Uuid
+  profile               ViralDnaProfile  @relation(fields: [profileId], references: [id])
+  profileId             String           @db.Uuid
+  statement             String
+  supportingEvidence    Json? // string[]
+  contradictingEvidence Json? // string[]
+  confidence            Float?
+  hypothesisType        HypothesisType
+  testability           String?
+  recommendedValidation String?
+  status                HypothesisStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([profileId])
+  @@map("viral_dna_hypotheses")
+}
+
+model ViralDnaEvidence {
+  id                String             @id @default(uuid()) @db.Uuid
+  profile           ViralDnaProfile    @relation(fields: [profileId], references: [id])
+  profileId         String             @db.Uuid
+  evidenceId        String // stable key referenced from the nested JSON profiles, e.g. "hook.opening_sentence"
+  sourceType        EvidenceSourceType
+  sourceId          String? // TimelineSegment.id / VisualScene.id / TranscriptSegment.id, when applicable
+  timestampStart    Float?
+  timestampEnd      Float?
+  transcriptExcerpt String?
+  metricName        String?
+  metricValue       Float?
+  explanation       String?
+
+  createdAt DateTime @default(now())
+
+  @@index([profileId])
+  @@index([profileId, evidenceId])
+  @@map("viral_dna_evidence")
+}
+
+model ViralDnaValidationResult {
+  id                String          @id @default(uuid()) @db.Uuid
+  profile           ViralDnaProfile @relation(fields: [profileId], references: [id])
+  profileId         String          @db.Uuid
+  valid             Boolean
+  errors            Json? // string[]
+  warnings          Json? // string[]
+  unsupportedClaims Json? // string[]
+  missingEvidence   Json? // string[]
+  confidenceSummary Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([profileId])
+  @@map("viral_dna_validation_results")
 }
 
 // ---------------------------------------------------------------------------

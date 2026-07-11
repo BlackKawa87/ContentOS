@@ -78,6 +78,10 @@ alter table public.visual_scenes enable row level security;
 alter table public.audio_metrics enable row level security;
 alter table public.channel_analyses enable row level security;
 alter table public.viral_dna_profiles enable row level security;
+alter table public.viral_dna_scores enable row level security;
+alter table public.viral_dna_hypotheses enable row level security;
+alter table public.viral_dna_evidence enable row level security;
+alter table public.viral_dna_validation_results enable row level security;
 alter table public.content_builder_outputs enable row level security;
 alter table public.knowledge_base_entries enable row level security;
 alter table public.api_usage_logs enable row level security;
@@ -396,18 +400,85 @@ create policy "channel_analyses_all" on public.channel_analyses
     where p.id = channel_analyses."projectId" and (p."ownerId" = auth.uid() or public.is_admin())
   ));
 
+-- ---------------------------------------------------------------------------
+-- Viral DNA Engine (Phase 3) — viral_dna_profiles scoped via videos.project;
+-- the 4 child tables scoped through viral_dna_profiles.videoId in turn.
+-- ---------------------------------------------------------------------------
+
 drop policy if exists "viral_dna_profiles_all" on public.viral_dna_profiles;
 create policy "viral_dna_profiles_all" on public.viral_dna_profiles
   for all
   using (exists (
-    select 1 from public.channel_analyses ca
-    join public.projects p on p.id = ca."projectId"
-    where ca.id = viral_dna_profiles."channelAnalysisId" and (p."ownerId" = auth.uid() or public.is_admin())
+    select 1 from public.videos v join public.projects p on p.id = v."projectId"
+    where v.id = viral_dna_profiles."videoId" and (p."ownerId" = auth.uid() or public.is_admin())
   ))
   with check (exists (
-    select 1 from public.channel_analyses ca
-    join public.projects p on p.id = ca."projectId"
-    where ca.id = viral_dna_profiles."channelAnalysisId" and (p."ownerId" = auth.uid() or public.is_admin())
+    select 1 from public.videos v join public.projects p on p.id = v."projectId"
+    where v.id = viral_dna_profiles."videoId" and (p."ownerId" = auth.uid() or public.is_admin())
+  ));
+
+drop policy if exists "viral_dna_scores_all" on public.viral_dna_scores;
+create policy "viral_dna_scores_all" on public.viral_dna_scores
+  for all
+  using (exists (
+    select 1 from public.viral_dna_profiles vdp
+    join public.videos v on v.id = vdp."videoId"
+    join public.projects p on p.id = v."projectId"
+    where vdp.id = viral_dna_scores."profileId" and (p."ownerId" = auth.uid() or public.is_admin())
+  ))
+  with check (exists (
+    select 1 from public.viral_dna_profiles vdp
+    join public.videos v on v.id = vdp."videoId"
+    join public.projects p on p.id = v."projectId"
+    where vdp.id = viral_dna_scores."profileId" and (p."ownerId" = auth.uid() or public.is_admin())
+  ));
+
+drop policy if exists "viral_dna_hypotheses_all" on public.viral_dna_hypotheses;
+create policy "viral_dna_hypotheses_all" on public.viral_dna_hypotheses
+  for all
+  using (exists (
+    select 1 from public.viral_dna_profiles vdp
+    join public.videos v on v.id = vdp."videoId"
+    join public.projects p on p.id = v."projectId"
+    where vdp.id = viral_dna_hypotheses."profileId" and (p."ownerId" = auth.uid() or public.is_admin())
+  ))
+  with check (exists (
+    select 1 from public.viral_dna_profiles vdp
+    join public.videos v on v.id = vdp."videoId"
+    join public.projects p on p.id = v."projectId"
+    where vdp.id = viral_dna_hypotheses."profileId" and (p."ownerId" = auth.uid() or public.is_admin())
+  ));
+
+drop policy if exists "viral_dna_evidence_all" on public.viral_dna_evidence;
+create policy "viral_dna_evidence_all" on public.viral_dna_evidence
+  for all
+  using (exists (
+    select 1 from public.viral_dna_profiles vdp
+    join public.videos v on v.id = vdp."videoId"
+    join public.projects p on p.id = v."projectId"
+    where vdp.id = viral_dna_evidence."profileId" and (p."ownerId" = auth.uid() or public.is_admin())
+  ))
+  with check (exists (
+    select 1 from public.viral_dna_profiles vdp
+    join public.videos v on v.id = vdp."videoId"
+    join public.projects p on p.id = v."projectId"
+    where vdp.id = viral_dna_evidence."profileId" and (p."ownerId" = auth.uid() or public.is_admin())
+  ));
+
+drop policy if exists "viral_dna_validation_results_all" on public.viral_dna_validation_results;
+create policy "viral_dna_validation_results_all" on public.viral_dna_validation_results
+  for all
+  using (exists (
+    select 1 from public.viral_dna_profiles vdp
+    join public.videos v on v.id = vdp."videoId"
+    join public.projects p on p.id = v."projectId"
+    where vdp.id = viral_dna_validation_results."profileId" and (p."ownerId" = auth.uid() or public.is_admin())
+  ))
+  with check (exists (
+    select 1 from public.viral_dna_profiles vdp
+    join public.videos v on v.id = vdp."videoId"
+    join public.projects p on p.id = v."projectId"
+    where vdp.id = viral_dna_validation_results."profileId" and (p."ownerId" = auth.uid() or public.is_admin())
   ));
 
 drop policy if exists "content_builder_outputs_all" on public.content_builder_outputs;

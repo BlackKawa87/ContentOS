@@ -1,4 +1,4 @@
-import { prisma } from './prisma.ts'
+import { prisma } from './prisma'
 
 const key = process.env.SETTINGS_ENCRYPTION_KEY
 if (!key) throw new Error('SETTINGS_ENCRYPTION_KEY must be set')

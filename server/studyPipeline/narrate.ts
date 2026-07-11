@@ -1,10 +1,10 @@
-import type { VideoModel as Video } from '../generated/prisma/models.ts'
-import { prisma } from '../lib/prisma.ts'
-import { getElevenLabsClientForProfile, DEFAULT_VOICE_ID } from '../lib/elevenlabs.ts'
-import { uploadAsset } from '../lib/storage.ts'
-import { logApiUsage, RATES } from '../lib/apiUsage.ts'
-import { getMediaDurationSec } from '../lib/ffmpeg.ts'
-import { getVideoContext } from './common.ts'
+import type { VideoModel as Video } from '../generated/prisma/models'
+import { prisma } from '../lib/prisma'
+import { getElevenLabsClientForProfile, DEFAULT_VOICE_ID } from '../lib/elevenlabs'
+import { uploadAsset } from '../lib/storage'
+import { logApiUsage, RATES } from '../lib/apiUsage'
+import { getMediaDurationSec } from '../lib/ffmpeg'
+import { getVideoContext } from './common'
 
 export async function narrateStage(video: Video): Promise<void> {
   const { projectId, profile } = await getVideoContext(video)

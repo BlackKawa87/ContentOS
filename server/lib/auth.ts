@@ -1,5 +1,5 @@
 import type { VercelRequest } from '@vercel/node'
-import { supabaseAdmin } from './supabaseAdmin.ts'
+import { supabaseAdmin } from './supabaseAdmin'
 
 export interface AuthedUser {
   id: string

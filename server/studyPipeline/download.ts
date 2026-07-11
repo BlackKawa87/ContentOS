@@ -1,8 +1,8 @@
-import type { VideoModel as Video } from '../generated/prisma/models.ts'
-import { prisma } from '../lib/prisma.ts'
-import { downloadVideo } from '../lib/ytdlp.ts'
-import { uploadAsset } from '../lib/storage.ts'
-import { getVideoContext } from './common.ts'
+import type { VideoModel as Video } from '../generated/prisma/models'
+import { prisma } from '../lib/prisma'
+import { downloadVideo } from '../lib/ytdlp'
+import { uploadAsset } from '../lib/storage'
+import { getVideoContext } from './common'
 
 export async function downloadStage(video: Video): Promise<void> {
   const { projectId, profile } = await getVideoContext(video)

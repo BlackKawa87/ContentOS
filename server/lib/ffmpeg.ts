@@ -1,13 +1,19 @@
 import ffmpeg from 'fluent-ffmpeg'
-import ffmpegPath from 'ffmpeg-static'
-import ffprobeStatic from 'ffprobe-static'
+import * as ffmpegStaticModule from 'ffmpeg-static'
+import * as ffprobeStaticModule from 'ffprobe-static'
 import { writeFile, readFile, unlink, mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
+import { unwrapDefault } from './interop'
 
-if (ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath)
-ffmpeg.setFfprobePath(ffprobeStatic.path)
+// Both packages' default exports get inconsistently unwrapped across
+// tsx/local vs Vercel's build — see the interop note in CLAUDE.md.
+const ffmpegPath = unwrapDefault<string>(ffmpegStaticModule)
+const ffprobePath = unwrapDefault<{ path: string }>(ffprobeStaticModule).path
+
+if (typeof ffmpegPath === 'string' && ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath)
+if (typeof ffprobePath === 'string' && ffprobePath) ffmpeg.setFfprobePath(ffprobePath)
 
 /** Returns the duration (seconds) of an audio/video buffer via ffprobe. */
 export async function getMediaDurationSec(buffer: Buffer, ext: string): Promise<number> {

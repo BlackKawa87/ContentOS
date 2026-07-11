@@ -1,9 +1,9 @@
-import type { VideoModel as Video } from '../generated/prisma/models.ts'
-import { prisma } from '../lib/prisma.ts'
-import { getOpenAiClientForProfile } from '../lib/openai.ts'
-import { uploadAsset } from '../lib/storage.ts'
-import { logApiUsage, RATES } from '../lib/apiUsage.ts'
-import { getVideoContext } from './common.ts'
+import type { VideoModel as Video } from '../generated/prisma/models'
+import { prisma } from '../lib/prisma'
+import { getOpenAiClientForProfile } from '../lib/openai'
+import { uploadAsset } from '../lib/storage'
+import { logApiUsage, RATES } from '../lib/apiUsage'
+import { getVideoContext } from './common'
 
 interface QuizQuestionDraft {
   question: string

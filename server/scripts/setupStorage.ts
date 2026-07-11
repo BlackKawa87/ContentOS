@@ -1,5 +1,5 @@
 import 'dotenv/config'
-import { supabaseAdmin } from '../lib/supabaseAdmin.ts'
+import { supabaseAdmin } from '../lib/supabaseAdmin'
 
 const BUCKETS = [
   'videos',

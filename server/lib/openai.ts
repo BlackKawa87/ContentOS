@@ -1,6 +1,6 @@
 import OpenAI from 'openai'
-import { prisma } from './prisma.ts'
-import { decryptSecret } from './encryption.ts'
+import { prisma } from './prisma'
+import { decryptSecret } from './encryption'
 
 /** Resolves the OpenAI client to use for a given profile: their own key if set, else the platform default. */
 export async function getOpenAiClientForProfile(profileId: string): Promise<OpenAI> {

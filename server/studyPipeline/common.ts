@@ -1,8 +1,8 @@
-import { prisma } from '../lib/prisma.ts'
-import { supabaseAdmin } from '../lib/supabaseAdmin.ts'
-import type { VideoModel as Video } from '../generated/prisma/models.ts'
-import type { ProfileModel as Profile } from '../generated/prisma/models.ts'
-import type { StorageBucket } from '../generated/prisma/enums.ts'
+import { prisma } from '../lib/prisma'
+import { supabaseAdmin } from '../lib/supabaseAdmin'
+import type { VideoModel as Video } from '../generated/prisma/models'
+import type { ProfileModel as Profile } from '../generated/prisma/models'
+import type { StorageBucket } from '../generated/prisma/enums'
 
 /** Every stage handler needs the video's owning project + profile (for API keys / language prefs). */
 export async function getVideoContext(video: Video): Promise<{ projectId: string; profile: Profile }> {

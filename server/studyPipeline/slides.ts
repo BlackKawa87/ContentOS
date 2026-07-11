@@ -1,10 +1,10 @@
 import * as PptxGenJSModule from 'pptxgenjs'
-import type { VideoModel as Video } from '../generated/prisma/models.ts'
-import { prisma } from '../lib/prisma.ts'
-import { uploadAsset } from '../lib/storage.ts'
-import { unwrapDefault } from '../lib/interop.ts'
-import { getVideoContext } from './common.ts'
-import { buildSlidePlan } from './slidePlan.ts'
+import type { VideoModel as Video } from '../generated/prisma/models'
+import { prisma } from '../lib/prisma'
+import { uploadAsset } from '../lib/storage'
+import { unwrapDefault } from '../lib/interop'
+import { getVideoContext } from './common'
+import { buildSlidePlan } from './slidePlan'
 
 const PptxGenJS = unwrapDefault<typeof import('pptxgenjs').default>(PptxGenJSModule)
 

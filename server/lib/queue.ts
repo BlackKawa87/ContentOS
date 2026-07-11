@@ -1,6 +1,6 @@
-import { prisma } from './prisma.ts'
-import { nextStage } from '../studyPipeline/stages.ts'
-import { stageRegistry } from '../studyPipeline/registry.ts'
+import { prisma } from './prisma'
+import { nextStage } from '../studyPipeline/stages'
+import { stageRegistry } from '../studyPipeline/registry'
 
 const MAX_ATTEMPTS = 3
 

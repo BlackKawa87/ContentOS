@@ -1,5 +1,5 @@
-import { prisma } from './prisma.ts'
-import type { ApiProvider } from '../generated/prisma/enums.ts'
+import { prisma } from './prisma'
+import type { ApiProvider } from '../generated/prisma/enums'
 
 /** OpenAI pricing (USD) — gpt-4o-mini class rates, approximate, per 1M tokens/chars. Update as needed. */
 export const RATES = {

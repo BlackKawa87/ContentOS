@@ -1,5 +1,5 @@
-import type { JobStage } from '../generated/prisma/enums.ts'
-import type { VideoModel as Video } from '../generated/prisma/models.ts'
+import type { JobStage } from '../generated/prisma/enums'
+import type { VideoModel as Video } from '../generated/prisma/models'
 
 /** Ordered pipeline: QUEUED is the entry point, COMPLETED/FAILED are terminal. */
 export const STAGE_ORDER: JobStage[] = [

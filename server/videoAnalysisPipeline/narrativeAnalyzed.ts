@@ -77,6 +77,14 @@ export async function narrativeAnalyzedStage(video: Video): Promise<void> {
   const raw = completion.choices[0].message.content ?? '{}'
   const parsed = JSON.parse(raw) as NarrativeAnalysisDraft
 
+  // The model occasionally drifts and returns a value from the other enum listed in the
+  // prompt (e.g. a HookType value in narrativePattern) — Prisma rejects unknown enum
+  // values outright, so validate against the allowed set rather than trust the model.
+  if (parsed.hookType && !HOOK_TYPES.includes(parsed.hookType)) parsed.hookType = undefined
+  if (parsed.narrativePattern && !NARRATIVE_PATTERNS.includes(parsed.narrativePattern)) {
+    parsed.narrativePattern = undefined
+  }
+
   await prisma.narrativeAnalysis.upsert({
     where: { videoId: video.id },
     create: { videoId: video.id, ...parsed },

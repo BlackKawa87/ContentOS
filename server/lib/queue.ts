@@ -110,4 +110,14 @@ export async function advanceNextPendingJob(): Promise<AdvanceResult | null> {
   return advanceJob(job.id)
 }
 
+/** Advances the given video's oldest PENDING job. Returns null if it has none queued. */
+export async function advanceNextPendingJobForVideo(videoId: string): Promise<AdvanceResult | null> {
+  const job = await prisma.processingJob.findFirst({
+    where: { videoId, status: 'PENDING' },
+    orderBy: { createdAt: 'asc' },
+  })
+  if (!job) return null
+  return advanceJob(job.id)
+}
+
 export { MAX_ATTEMPTS }

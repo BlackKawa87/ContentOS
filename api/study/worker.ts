@@ -1,6 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { requireUser, HttpError } from '../../server/lib/auth.ts'
-import { advanceJob, advanceNextPendingJob } from '../../server/lib/queue.ts'
+import {
+  advanceJob,
+  advanceNextPendingJob,
+  advanceNextPendingJobForVideo,
+} from '../../server/lib/queue.ts'
 
 export const config = { maxDuration: 300 }
 
@@ -13,8 +17,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(405).json({ error: 'Method not allowed' })
     }
 
-    const { jobId } = req.body ?? {}
-    const result = typeof jobId === 'string' ? await advanceJob(jobId) : await advanceNextPendingJob()
+    const { jobId, videoId } = req.body ?? {}
+    const result =
+      typeof jobId === 'string'
+        ? await advanceJob(jobId)
+        : typeof videoId === 'string'
+          ? await advanceNextPendingJobForVideo(videoId)
+          : await advanceNextPendingJob()
 
     if (!result) return res.status(200).json({ message: 'queue empty' })
     return res.status(200).json(result)

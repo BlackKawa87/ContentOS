@@ -7,6 +7,8 @@ import Login from './routes/Login'
 import Dashboard from './routes/Dashboard'
 import Settings from './routes/Settings'
 import ComingSoon from './routes/ComingSoon'
+import StudyEngine from './routes/study/StudyEngine'
+import VideoDetail from './routes/study/VideoDetail'
 
 function App() {
   return (
@@ -23,7 +25,8 @@ function App() {
               }
             >
               <Route index element={<Dashboard />} />
-              <Route path="/study" element={<ComingSoon title="Study Engine" />} />
+              <Route path="/study" element={<StudyEngine />} />
+              <Route path="/study/:videoId" element={<VideoDetail />} />
               <Route
                 path="/reverse-engineering"
                 element={<ComingSoon title="Reverse Engineering Engine" />}

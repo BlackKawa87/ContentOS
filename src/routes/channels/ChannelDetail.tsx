@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../../lib/supabaseClient'
 
@@ -63,6 +63,7 @@ function formatDuration(sec: number | null): string {
 export default function ChannelDetail() {
   const { t } = useTranslation()
   const { channelId } = useParams<{ channelId: string }>()
+  const navigate = useNavigate()
   const [channel, setChannel] = useState<ChannelRow | null>(null)
   const [videos, setVideos] = useState<VideoRow[]>([])
   const [jobs, setJobs] = useState<Job[]>([])
@@ -294,7 +295,11 @@ export default function ChannelDetail() {
               </thead>
               <tbody>
                 {filteredVideos.map((v) => (
-                  <tr key={v.id} className="border-t border-neutral-200 dark:border-neutral-800">
+                  <tr
+                    key={v.id}
+                    onClick={() => navigate(`/channels/${channelId}/videos/${v.id}`)}
+                    className="cursor-pointer border-t border-neutral-200 transition hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-900"
+                  >
                     <td className="py-2 pr-3">
                       {v.thumbnailUrl && <img src={v.thumbnailUrl} alt="" className="h-8 w-14 rounded object-cover" />}
                     </td>

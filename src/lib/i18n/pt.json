@@ -80,5 +80,54 @@
       "status": "Status",
       "actions": "Ações"
     }
+  },
+  "videoDetail": {
+    "backToChannel": "Voltar ao canal",
+    "notAvailable": "Não disponível.",
+    "tabs": { "overview": "Visão geral", "viralDna": "DNA Viral" },
+    "overview": {
+      "transcript": "Transcrição",
+      "timeline": "Linha do tempo",
+      "narrative": "Narrativa",
+      "visual": "Visual",
+      "audio": "Áudio",
+      "hookType": "Tipo de gancho",
+      "narrativePattern": "Padrão narrativo",
+      "openLoops": "Loops abertos",
+      "payoffs": "Resoluções",
+      "pace": "Ritmo",
+      "pauses": "Pausas",
+      "silenceRatio": "Taxa de silêncio",
+      "sceneSync": "Sincronia de cena"
+    },
+    "viralDna": {
+      "needsAnalysis": "Este vídeo precisa concluir o pipeline de Análise de Vídeo antes que o DNA Viral possa ser gerado.",
+      "generate": "Gerar DNA Viral",
+      "generating": "Gerando…",
+      "retry": "Tentar novamente",
+      "version": "Versão",
+      "currentVersion": "atual",
+      "confidence": "Confiança",
+      "export": "Exportar JSON",
+      "approve": "Aprovar",
+      "summary": "Resumo",
+      "scorecard": "Pontuação",
+      "hypotheses": "Hipóteses",
+      "evidence": "Evidências",
+      "versions": "Versões",
+      "raw": "JSON bruto",
+      "hook": "Gancho",
+      "narrative": "Narrativa",
+      "retention": "Retenção",
+      "visual": "Visual",
+      "audio": "Áudio",
+      "emotion": "Emoção",
+      "emotionInferred": "Inferido, não é um fato medido",
+      "performance": "Desempenho",
+      "openLoopResolution": "Resolução de loops abertos",
+      "reject": "Rejeitar",
+      "saveEdit": "Salvar edição (nova versão)",
+      "logs": "Logs de processamento"
+    }
   }
 }

@@ -80,5 +80,54 @@
       "status": "Status",
       "actions": "Actions"
     }
+  },
+  "videoDetail": {
+    "backToChannel": "Back to channel",
+    "notAvailable": "Not available.",
+    "tabs": { "overview": "Overview", "viralDna": "Viral DNA" },
+    "overview": {
+      "transcript": "Transcript",
+      "timeline": "Timeline",
+      "narrative": "Narrative",
+      "visual": "Visual",
+      "audio": "Audio",
+      "hookType": "Hook type",
+      "narrativePattern": "Narrative pattern",
+      "openLoops": "Open loops",
+      "payoffs": "Payoffs",
+      "pace": "Pace",
+      "pauses": "Pauses",
+      "silenceRatio": "Silence ratio",
+      "sceneSync": "Scene sync"
+    },
+    "viralDna": {
+      "needsAnalysis": "This video needs to complete the Video Analysis pipeline before Viral DNA can be generated.",
+      "generate": "Generate Viral DNA",
+      "generating": "Generating…",
+      "retry": "Retry",
+      "version": "Version",
+      "currentVersion": "current",
+      "confidence": "Confidence",
+      "export": "Export JSON",
+      "approve": "Approve",
+      "summary": "Summary",
+      "scorecard": "Scorecard",
+      "hypotheses": "Hypotheses",
+      "evidence": "Evidence",
+      "versions": "Versions",
+      "raw": "Raw JSON",
+      "hook": "Hook",
+      "narrative": "Narrative",
+      "retention": "Retention",
+      "visual": "Visual",
+      "audio": "Audio",
+      "emotion": "Emotion",
+      "emotionInferred": "Inferred, not measured fact",
+      "performance": "Performance",
+      "openLoopResolution": "Open loop resolution",
+      "reject": "Reject",
+      "saveEdit": "Save edit (new version)",
+      "logs": "Processing logs"
+    }
   }
 }

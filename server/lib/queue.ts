@@ -63,7 +63,7 @@ export async function advanceJob(jobId: string): Promise<AdvanceResult> {
 
     if (targetStage !== 'COMPLETED') {
       await prisma.processingJob.create({
-        data: { videoId: job.videoId, stage: job.stage, status: 'PENDING' },
+        data: { videoId: job.videoId, stage: targetStage, status: 'PENDING' },
       })
     }
 

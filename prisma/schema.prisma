@@ -903,6 +903,7 @@ model ViralDnaProfile {
   overallConfidenceScore     Float?
 
   // Deep nested profiles — see docs/viral-dna-schema.md for field-level shape.
+  metrics            Json? // Module 2's absolute + normalized metrics, consumed by every later stage
   hook               Json?
   narrative          Json?
   retention          Json?

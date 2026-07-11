@@ -35,6 +35,18 @@ narration track) instead of Remotion. This sandbox has no system Chrome and Remo
 Chromium download was judged too slow/fragile to justify given the session's cost. Revisit Remotion
 later if richer slide animation is wanted — see `server/lib/ffmpeg.ts` / `server/studyPipeline/renderVideo.ts`.
 
+**CJS default-export interop gotcha**: `import X from 'some-cjs-package'` under tsx/Node ESM
+sometimes yields the real class, sometimes the whole module, sometimes a double-wrapped
+`{ default: { default: Class } }` (hit this with both `yt-dlp-wrap` and `pptxgenjs`, each
+wrapped differently). If a newly added CJS dependency throws "X is not a constructor" at
+runtime despite type-checking fine, import it as `import * as XModule from '...'` and pass it
+through `unwrapDefault<T>()` from `server/lib/interop.ts` rather than trusting the default import.
+
+**yt-dlp binary**: `server/lib/ytdlp.ts` downloads the standalone `yt-dlp_macos`/`yt-dlp_linux`
+binary directly (with a size check against `Content-Length` to catch truncated downloads) —
+`yt-dlp-wrap`'s own `downloadFromGithub` fetches the generic Python-zipapp asset instead, which
+needs Python 3.10+ and isn't reliably present in dev sandboxes or on Vercel's Linux runtime.
+
 ## Stack (do not change)
 
 - Frontend: React + TypeScript + Vite + Tailwind CSS v4 (`@tailwindcss/vite`, no `tailwind.config.js`)

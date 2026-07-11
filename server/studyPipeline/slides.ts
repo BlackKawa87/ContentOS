@@ -1,9 +1,12 @@
-import PptxGenJS from 'pptxgenjs'
+import * as PptxGenJSModule from 'pptxgenjs'
 import type { VideoModel as Video } from '../generated/prisma/models.ts'
 import { prisma } from '../lib/prisma.ts'
 import { uploadAsset } from '../lib/storage.ts'
+import { unwrapDefault } from '../lib/interop.ts'
 import { getVideoContext } from './common.ts'
 import { buildSlidePlan } from './slidePlan.ts'
+
+const PptxGenJS = unwrapDefault<typeof import('pptxgenjs').default>(PptxGenJSModule)
 
 export async function slidesStage(video: Video): Promise<void> {
   const { projectId, profile } = await getVideoContext(video)

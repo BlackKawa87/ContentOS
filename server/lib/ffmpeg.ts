@@ -1,11 +1,13 @@
 import ffmpeg from 'fluent-ffmpeg'
 import ffmpegPath from 'ffmpeg-static'
+import ffprobeStatic from 'ffprobe-static'
 import { writeFile, readFile, unlink, mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
 
 if (ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath)
+ffmpeg.setFfprobePath(ffprobeStatic.path)
 
 /** Returns the duration (seconds) of an audio/video buffer via ffprobe. */
 export async function getMediaDurationSec(buffer: Buffer, ext: string): Promise<number> {

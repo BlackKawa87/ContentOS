@@ -3,23 +3,9 @@ import { readFile, writeFile, unlink, chmod, stat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
+import { unwrapDefault } from './interop.ts'
 
-// yt-dlp-wrap is CJS with `exports.default = YTDlpWrap`. Node's CJS/ESM interop
-// double-wraps this (`mod.default.default` is the actual class), so unwrap
-// however many `.default` levels are actually present rather than assuming one.
-function unwrapDefault(mod: unknown): unknown {
-  let current = mod
-  while (
-    typeof current === 'object' &&
-    current !== null &&
-    'default' in current &&
-    typeof (current as { default: unknown }).default !== 'undefined'
-  ) {
-    current = (current as { default: unknown }).default
-  }
-  return current
-}
-const YtDlpWrap = unwrapDefault(YtDlpWrapModule) as typeof import('yt-dlp-wrap').default
+const YtDlpWrap = unwrapDefault<typeof import('yt-dlp-wrap').default>(YtDlpWrapModule)
 
 /**
  * yt-dlp-wrap's own downloadFromGithub always fetches the generic `yt-dlp`

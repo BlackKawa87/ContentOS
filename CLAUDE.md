@@ -60,7 +60,7 @@ needs Python 3.10+ and isn't reliably present in dev sandboxes or on Vercel's Li
 
 - Frontend: React + TypeScript + Vite + Tailwind CSS v4 (`@tailwindcss/vite`, no `tailwind.config.js`)
 - Backend: Vercel Serverless Functions under `/api`
-- Database: Supabase Postgres + Storage + Auth + Realtime + RLS
+- Database: Supabase Postgres + Storage + Realtime (Auth/RLS present but disabled — see Architecture)
 - ORM: Prisma (client generated to `server/generated/prisma`, gitignored)
 - AI: OpenAI API (transcription, translation, quiz/flashcard generation)
 - Voice: ElevenLabs API (PT narration)
@@ -72,17 +72,24 @@ needs Python 3.10+ and isn't reliably present in dev sandboxes or on Vercel's Li
 
 ## Architecture
 
-- **Frontend reads / realtime** → `supabase-js` (anon key) directly from `src/`, protected by RLS
-  (`auth.uid()` + role claim in `profiles`).
-- **Mutations & pipeline work** → `/api/*` Vercel functions using Prisma + the service role key
-  (bypasses RLS), with role checks done in code from the verified Supabase JWT.
+- **No login (deliberate, confirmed with user)**: ContentOS is single-user personal software, not
+  a multi-tenant product. `server/lib/auth.ts`'s `requireUser()` doesn't verify a Supabase
+  session/JWT — it returns the one existing `profiles` row directly, so every `/api/*` route
+  acts as that fixed user without a Bearer token. RLS is **disabled** on all 33 tables
+  (`supabase/policies.sql`, applied to the live DB) since `auth.uid()` is always null with no one
+  ever signing in — the old per-owner policies would otherwise deny everything. The policy/trigger
+  SQL is left in the file as inert historical record rather than deleted, in case multi-user auth
+  is ever reintroduced. There is no `/login` route, no `ProtectedRoute`, no sign-out.
+- **Frontend reads / realtime** → `supabase-js` (anon key) directly from `src/`, open access (RLS
+  disabled, see above).
+- **Mutations & pipeline work** → `/api/*` Vercel functions using Prisma + the service role key.
 - **Processing queue, not long-running functions**: `yt-dlp`/`ffmpeg`/OpenAI/ElevenLabs/Remotion
   work is split into discrete `ProcessingJob` stages (see `JobStage` enum in
   `prisma/schema.prisma`). Each `/api/study/worker` invocation advances exactly one job by one
   stage and returns — never chain multiple stages in a single serverless invocation, since Vercel
   functions have bounded `maxDuration` and ephemeral `/tmp`.
-- Per-user OpenAI/ElevenLabs keys entered in Settings are stored **encrypted** (`pgcrypto`) and
-  take precedence over the platform-default env vars for that user's jobs.
+- The one profile's OpenAI/ElevenLabs keys entered in Settings are stored **encrypted**
+  (`pgcrypto`) and take precedence over the platform-default env vars for that profile's jobs.
 
 ## Data model
 
